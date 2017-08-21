@@ -17,66 +17,66 @@ CB.initOSS({
   bucket          : 'erp-user-norm',
 });
 
-(async () => {
-  try {
-    const data = await CB.crud.find('Customer', 'find', {
-      conditionCollection: [
-        {
-          name: 'name',
-          key: 'cate',
-          type: 'exist'
-        }
-      ],
-      conditionJoins: 'name',
-      includeCollection: [
-        {
-          key: 'levels',
-          type: 'array',
-          className: 'CustomerLevel',
-        },
-        {
-          key: 'cate',
-          type: 'pointer',
-          className: 'CustomerCate',
-        },
-        {
-          key: 'cate.company',
-          type: 'pointer',
-          className: 'Company',
-          conditionCollection: [
-            {
-              name: 'name',
-              key: 'number',
-              value: 1,
-              type: 'equal'
-            }
-          ],
-          conditionJoins: 'name',
-          orderCollection: [
-            {
-              key: 'number',
-              type: 'desc',
-            },
-          ]
-        },
-        {
-          key: 'cate.company.user',
-          type: 'pointer',
-          className: 'User',
-        },
-      ],
-      orderCollection: [
-        // {
-        //   key: 'objectId',
-        //   type: 'asc',
-        // },
-      ],
-    });
-    console.log(JSON.stringify(data));
-  }catch (error) {
-    console.log(error);
-  }
-})();
+// (async () => {
+//   try {
+//     const data = await CB.crud.find('Customer', 'find', {
+//       conditionCollection: [
+//         {
+//           name: 'name',
+//           key: 'cate',
+//           type: 'exist'
+//         }
+//       ],
+//       conditionJoins: 'name',
+//       includeCollection: [
+//         {
+//           key: 'levels',
+//           type: 'array',
+//           className: 'CustomerLevel',
+//         },
+//         {
+//           key: 'cate',
+//           type: 'pointer',
+//           className: 'CustomerCate',
+//         },
+//         {
+//           key: 'cate.company',
+//           type: 'pointer',
+//           className: 'Company',
+//           conditionCollection: [
+//             {
+//               name: 'name',
+//               key: 'number',
+//               value: 1,
+//               type: 'equal'
+//             }
+//           ],
+//           conditionJoins: 'name',
+//           orderCollection: [
+//             {
+//               key: 'number',
+//               type: 'desc',
+//             },
+//           ]
+//         },
+//         {
+//           key: 'cate.company.user',
+//           type: 'pointer',
+//           className: 'User',
+//         },
+//       ],
+//       orderCollection: [
+//         // {
+//         //   key: 'objectId',
+//         //   type: 'asc',
+//         // },
+//       ],
+//     });
+//     console.log(JSON.stringify(data));
+//   }catch (error) {
+//     console.log(error);
+//   }
+// })();
 
 // (async () => {
 //   try {
@@ -90,12 +90,14 @@ CB.initOSS({
 //   }
 // })();
 
+const Customer = CB.Object.extend('Customer');
+const User = CB.Object.extend('_User');
+const user = new User();
+user.set('name', 'duyang');
+user.set('sex', 1);
+user.increment('number', 1);
 
-// const User = CB.Object.extend('User');
-// const user = new User();
-// user.set('name', 'duyang');
-// user.set('sex', 1);
-// console.log(user);
+console.log(user);
 // user.save().then(function (data) {
 //   console.log(data);
 // }, function (error) {

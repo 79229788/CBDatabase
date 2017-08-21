@@ -11,84 +11,55 @@ module.exports = function (CB) {
   CB.Object = function (attributes, options) {
     if (_.isString(attributes)) return CB.Object._create.apply(this, arguments);
     attributes = attributes || {};
-    if (options && options.parse) {
-      attributes = this.parse(attributes);
-      attributes = this._mergeMagicFields(attributes);
-    }
-    const defaults = CB._getValue(this, 'defaults');
-    if (defaults) {
-      attributes = _.extend({}, defaults, attributes);
-    }
-
-    this.attributes = {};
-    this._serverData = {};
+    if(attributes.constructor === this.constructor) attributes = attributes.toOrigin();
+    this.parseDefaultDate(attributes);
+    this._hasPoniterData = false;
     this.cid = _.uniqueId('c');
-    this._hasData = true;
-    this.set(attributes);
-    this._previousAttributes = _.clone(this.attributes);
-    this.initialize.apply(this, arguments);
+    this._previousAttributes = _.cloneDeep(this.set(attributes).attributes);
+    this.init.apply(this, arguments);
   };
 
   _.extend(CB.Object.prototype, {
 
-    initialize: function initialize() {},
+    init: function() {},
 
     /**
-     * Converts a response into the hash of attributes to be set on the model.
-     * @ignore
+     * 解析默认日期属性
+     * @param object
+     * @return {*}
      */
-    parse: function parse(resp) {
-      const output = _.clone(resp);
+    parseDefaultDate: function (object) {
+      const output = _.clone(object);
       (['createdAt', 'updatedAt']).forEach((key) => {
-        if (output[key]) {
-          output[key] = CB._parseDate(output[key]);
-        }
+        if(output[key]) output[key] = CB._parseDate(output[key]);
       });
-      if (output.createdAt && !output.updatedAt) {
-        output.updatedAt = output.createdAt;
-      }
-      return output;
+      if(output.createdAt && !output.updatedAt) output.updatedAt = output.createdAt;
     },
 
     getObjectId: function () {
       return this.id;
     },
 
-    /**
-     * Returns the object's createdAt attribute.
-     * @return {Date}
-     */
     getCreatedAt: function () {
-      return this.createdAt || this.get('createdAt');
+      return this.get('createdAt');
     },
 
-    /**
-     * Returns the object's updatedAt attribute.
-     * @return {Date}
-     */
     getUpdatedAt: function () {
-      return this.updatedAt || this.get('updatedAt');
+      return this.get('updatedAt');
     },
-
+    /**
+     * 克隆模型
+     * @return {CB}
+     */
+    clone: function() {
+      return new this.constructor(this.toOrigin());
+    },
     /**
      * 是否已被修改
-     * @param attr
      * @return {boolean}
      */
-    isChanged: function (attr) {
-      return false;
-    },
-
-    /**
-     * 当前对象转为 引用显示
-     * @private
-     */
-    _toPointer: function _toPointer() {
-      return {
-        __type: "Pointer",
-        className: this.className,
-        objectId: this.id
-      };
+    isChanged: function () {
+      return !_.isEqual(this.attributes, this._previousAttributes);
     },
     /**
      * 获取数据
@@ -99,9 +70,6 @@ module.exports = function (CB) {
       switch (attr) {
         case 'objectId':
           return this.id;
-        case 'createdAt':
-        case 'updatedAt':
-          return this[attr];
         default:
           return this.attributes[attr];
       }
@@ -124,33 +92,80 @@ module.exports = function (CB) {
         checkReservedKey(key);
         attrs[key] = CB._decode(value, key);
       }
-
+      if(attrs.objectId) {
+        this.id = attrs.objectId;
+        delete attrs.objectId;
+      }
       this.attributes = attrs;
+      return this;
+    },
+    /**
+     * 增量设置数据
+     * @param key
+     * @param value
+     * @return {CB}
+     */
+    increment: function (key, value) {
+      if(!_.isInteger(value)) throw new Error('increment value must be number!');
+      delete this.attributes[key];
+      this.set(key + ':increment', parseInt(value));
       return this;
     },
 
     /**
-     * 合并自带的特殊字段
-     * @param attrs
-     * @return {*}
-     * @private
+     * 转化为json
+     * @return {string}
      */
-    _mergeMagicFields: function (attrs) {
-      const specialFields = ['objectId', 'createdAt', 'updatedAt'];
-      specialFields.forEach((attr) => {
-        if (attrs[attr]) {
-          if (attr === 'objectId') {
-            this.id = attrs[attr];
-          } else if ((attr === 'createdAt' || attr === 'updatedAt') && !_.isDate(attrs[attr])) {
-            this[attr] = CB._parseDate(attrs[attr]);
-          } else {
-            this[attr] = attrs[attr];
-          }
-          delete attrs[attr];
+    toJSON: function () {
+      const json = this._toFullJSON();
+      delete json['__type'];
+      delete json['className'];
+      return json;
+    },
+    _toFullJSON: function () {
+      const json = _.cloneDeep(this.attributes);
+      _.each(json, function (val, key) {
+        json[key] = CB._encode(val);
+      });
+      _.each(this._operations, function (val, key) {
+        json[key] = val;
+      });
+      if (_.has(this, "id")) {
+        json.objectId = this.id;
+      }
+      _(['createdAt', 'updatedAt']).each(function (key) {
+        if (_.has(_this, key)) {
+          const val = _this[key];
+          json[key] = _.isDate(val) ? val.toJSON() : val;
         }
       });
-      return attrs;
+      json.__type = "Object";
+      json.className = this.className;
+      return json;
     },
+    /**
+     * 转化为原始数据
+     * @return {object}
+     */
+    toOrigin: function () {
+      return _.extend({}, this.attributes, !_.isUndefined(this.id) ? {
+        objectId: this.id
+      } : {});
+    },
+    /**
+     * 当前对象转为引用对象(无完整数据）
+     * @private
+     */
+    toPointer: function () {
+      return {
+        __type: "Pointer",
+        className: this.className,
+        objectId: this.id
+      };
+    },
+
+
+
     /**
      * 保存数据
      * @return {*}
@@ -166,68 +181,51 @@ module.exports = function (CB) {
       }
 
       return this;
-    },
-
-    /**
-     * Returns a JSON version of the object suitable for saving to CB.
-     * @return {Object}
-     */
-    toJSON: function () {
-      const json = this._toFullJSON();
-      ["__type", "className"].forEach((value) => {
-        delete json[value];
-      });
-      return json;
-    },
-    _toFullJSON: function (seenObjects) {
-      const json = _.clone(this.attributes);
-      CB._objectEach(json, function (val, key) {
-        json[key] = CB._encode(val, seenObjects);
-      });
-      CB._objectEach(this._operations, function (val, key) {
-        json[key] = val;
-      });
-
-      if (_.has(this, "id")) {
-        json.objectId = this.id;
-      }
-      _(['createdAt', 'updatedAt']).each(function (key) {
-        if (_.has(_this, key)) {
-          const val = _this[key];
-          json[key] = _.isDate(val) ? val.toJSON() : val;
-        }
-      });
-      json.__type = "Object";
-      json.className = this.className;
-      return json;
-    },
-
-    /**
-     * Called when a fetch or login is complete to set the known server data to
-     * the given object.
-     * @private
-     */
-    _finishFetch: function _finishFetch(serverData, hasData) {
-      this._mergeMagicFields(serverData);
-      _.each(serverData, (value, key) => {
-        this._serverData[key] = AV._decode(value, key);
-      });
-      this._hasData = hasData;
-    },
+    }
 
   });
 
+
+
+  /**
+   * 查找未保存的子对象
+   * @param model
+   * @param children
+   * @param files
+   * @private
+   */
+  CB.Object._findUnsavedChildren = function (model, children, files) {
+    _.each(model.attributes, (value) => {
+      if (value instanceof CB.Object) {
+        if (model.isChanged()) children.push(value);
+      }else if(value instanceof CB.File) {
+        if (!value.url() && !value.id) files.push(value);
+      }
+    });
+  };
+
+  CB.Object._deepSaveAsync = function (model) {
+    let unsavedChildren = [];
+    let unsavedFiles = [];
+    CB.Object._findUnsavedChildren(model, unsavedChildren, unsavedFiles);
+
+  };
+
+
+
+
+  //********************************其它
+  //********************************
+  //********************************
   /**
    * Returns the appropriate subclass for making new instances of the given
    * className string.
    * @private
    */
   CB.Object._getSubclass = function (className) {
-    if (!_.isString(className)) {
-      throw new Error('CB.Object._getSubclass requires a string argument.');
-    }
+    if(!_.isString(className)) throw new Error('CB.Object._getSubclass requires a string argument.');
     let ObjectClass = CB.Object._classMap[className];
-    if (!ObjectClass) {
+    if(!ObjectClass) {
       ObjectClass = CB.Object.extend(className);
       CB.Object._classMap[className] = ObjectClass;
     }
@@ -238,9 +236,9 @@ module.exports = function (CB) {
    * Creates an instance of a subclass of CB.Object for the given classname.
    * @private
    */
-  CB.Object._create = function (className, attributes, options, noDefaultACL) {
+  CB.Object._create = function (className, attributes, options) {
     const ObjectClass = CB.Object._getSubclass(className);
-    return new ObjectClass(attributes, options, noDefaultACL);
+    return new ObjectClass(attributes, options);
   };
 
   // Set up a map of className to class so that we can create new instances of
@@ -266,7 +264,7 @@ module.exports = function (CB) {
 
   CB.Object.extend = function (className, protoProps, classProps) {
     // Handle the case with only two args.
-    if (!_.isString(className)) {
+    if(!_.isString(className)) {
       if (className && _.has(className, "className")) {
         return CB.Object.extend(className.className, className, protoProps);
       } else {
@@ -274,7 +272,7 @@ module.exports = function (CB) {
       }
     }
     // If someone tries to subclass "User", coerce it to the right type.
-    if (className === "User") className = "_User";
+    if(className === "User") className = "_User";
 
     let NewClassObject = null;
     if (_.has(CB.Object._classMap, className)) {
@@ -318,30 +316,5 @@ module.exports = function (CB) {
       return className;
     }
   });
-
-  /**
-   * 查找未保存的子对象
-   * @param model
-   * @param children
-   * @param files
-   * @private
-   */
-  CB.Object._findUnsavedChildren = function (model, children, files) {
-    _.each(model.attributes, (value) => {
-      if (value instanceof CB.Object) {
-        if (model.isChanged()) children.push(value);
-      }else if(value instanceof CB.File) {
-        if (!value.url() && !value.id) files.push(value);
-      }
-    });
-  };
-
-  CB.Object._deepSaveAsync = function (model) {
-    let unsavedChildren = [];
-    let unsavedFiles = [];
-    CB.Object._findUnsavedChildren(model, unsavedChildren, unsavedFiles);
-
-
-  };
 
 };

@@ -44,42 +44,6 @@ const inherits = function inherits(parent, protoProps, staticProps) {
   return child;
 };
 
-CB._mapObject = function(obj, iteratee, context) {
-  iteratee = cb(iteratee, context);
-  let keys =  _.keys(obj), length = keys.length, results = {}, currentKey;
-  for (let index = 0; index < length; index++) {
-    currentKey = keys[index];
-    results[currentKey] = iteratee(obj[currentKey], currentKey, obj);
-  }
-  function cb(value, context, argCount) {
-    if (value === null) return _.identity;
-    if (_.isFunction(value)) return optimizeCb(value, context, argCount);
-    if (_.isObject(value)) return _.matches(value);
-    return _.property(value);
-  }
-  function optimizeCb(func, context, argCount) {
-    if (context === void 0) return func;
-    switch (argCount === null ? 3 : argCount) {
-      case 1: return function(value) {
-        return func.call(context, value);
-      };
-      case 2: return function(value, other) {
-        return func.call(context, value, other);
-      };
-      case 3: return function(value, index, collection) {
-        return func.call(context, value, index, collection);
-      };
-      case 4: return function(accumulator, value, index, collection) {
-        return func.call(context, accumulator, value, index, collection);
-      };
-    }
-    return function() {
-      return func.apply(context, arguments);
-    };
-  }
-  return results;
-};
-
 CB._parseDate = function (dataString) {
   return moment(dataString).format('YYYY-MM-DD HH:mm:ss');
 };
@@ -101,138 +65,100 @@ CB._extend = function (protoProps, classProps) {
 };
 
 /**
- * Converts a value in a CB Object into the appropriate representation.
- * This is the JS equivalent of Java's CB.maybeReferenceAndEncode(Object)
- * if seenObjects is falsey. Otherwise any CB.Objects not in
- * seenObjects will be fully embedded rather than encoded
- * as a pointer.  This array will be used to prevent going into an infinite
- * loop because we have circular references.  If <seenObjects>
- * is set, then none of the CB Objects that are serialized can be dirty.
- * @private
+ * 转化普通对象为CBObject
  */
-CB._encode = function (value, seenObjects, disallowObjects) {
-  if (value instanceof CB.Object) {
-    if (disallowObjects) {
-      throw new Error("CB.Objects not allowed here");
+CB._encode = function (object) {
+  if(object instanceof CB.Object) {
+    if(!object._hasPoniterData) {
+      return object.toPointer();
     }
-    if (!seenObjects || _.include(seenObjects, value) || !value._hasData) {
-      return value._toPointer();
-    }
-    if (!value.isChanged()) {
-      seenObjects = seenObjects.concat(value);
-      return CB._encode(value._toFullJSON(seenObjects), seenObjects, disallowObjects);
+    if(!object.isChanged()) {
+      seenObjects = seenObjects.concat(object);
+      return CB._encode(object._toFullJSON(seenObjects), seenObjects, disallowObjects);
     }
     throw new Error("Tried to save an object with a pointer to a new, unsaved object.");
   }
-  if (_.isDate(value)) {
-    return { "__type": "Date", "iso": value.toJSON() };
+  if (_.isDate(object)) {
+    return { "__type": "Date", "iso": object.toJSON() };
   }
-  if (_.isArray(value)) {
-    return _.map(value, function (x) {
+  if (_.isArray(object)) {
+    return _.map(object, function (x) {
       return CB._encode(x, seenObjects, disallowObjects);
     });
   }
-  if (_.isRegExp(value)) {
-    return value.source;
+  if (_.isRegExp(object)) {
+    return object.source;
   }
-  if (value instanceof CB.Relation) {
-    return value.toJSON();
+  if (object instanceof CB.Relation) {
+    return object.toJSON();
   }
-  if (value instanceof CB.File) {
-    if (!value.url() && !value.id) {
+  if (object instanceof CB.File) {
+    if (!object.url() && !object.id) {
       throw new Error("Tried to save an object containing an unsaved file.");
     }
-    return value._toFullJSON();
+    return object._toFullJSON();
   }
-  if (_.isObject(value)) {
-    return CB._mapObject(value, function (value) {
-      return CB._encode(value, seenObjects, disallowObjects);
+  if (_.isObject(object)) {
+    return _.mapValues(object, function (object) {
+      return CB._encode(object, seenObjects, disallowObjects);
     });
   }
-  return value;
+  return object;
 };
-
-/**
- * The inverse function of CB._encode.
- * @private
- */
-CB._decode = function (value, key) {
-  if (!_.isObject(value) || _.isDate(value)) {
-    return value;
-  }
-  if (_.isArray(value)) {
-    return _.map(value, function (v) {
-      return CB._decode(v);
-    });
-  }
-  if (value instanceof CB.Object) {
-    return value;
-  }
-  if (value instanceof CB.File) {
-    return value;
-  }
-  let className;
-  if (value.__type === "Pointer") {
-    className = value.className;
-    const pointer = CB.Object._create(className, undefined, undefined, /* noDefaultACL*/true);
-    if (_.keys(value).length > 3) {
-      const v = _.clone(value);
-      delete v.__type;
-      delete v.className;
-      pointer._finishFetch(v, true);
-    } else {
-      pointer._finishFetch({ objectId: value.objectId }, false);
-    }
-    return pointer;
-  }
-  if (value.__type === "Object") {
-    // It's an Object included in a query result.
-    className = value.className;
-    const _v = _.clone(value);
-    delete _v.__type;
-    delete _v.className;
-    const object = CB.Object._create(className, undefined, undefined, /* noDefaultACL*/true);
-    object._finishFetch(_v, true);
-    return object;
-  }
-  if (value.__type === "Date") {
-    return CB._parseDate(value.iso);
-  }
-  if (value.__type === "Relation") {
-    if (!key) throw new Error('key missing decoding a Relation');
-    const relation = new CB.Relation(null, key);
-    relation.targetClassName = value.className;
-    return relation;
-  }
-  if (value.__type === 'File') {
-    const file = new CB.File(value.name);
-    const _v2 = _.clone(value);
-    delete _v2.__type;
-    file._finishFetch(_v2);
-    return file;
-  }
-  return CB._mapObject(value, CB._decode);
-};
-
-CB._encodeObjectOrArray = function (value) {
+CB._encodeObjectOrArray = function (object) {
   function encodeCBObject(object) {
     if (object && object._toFullJSON) {
       object = object._toFullJSON([]);
     }
 
-    return CB._mapObject(object, function (value) {
-      return CB._encode(value, []);
+    return _.mapValues(object, function (object) {
+      return CB._encode(object, []);
     });
   }
 
-  if (_.isArray(value)) {
-    return value.map(function (object) {
+  if (_.isArray(object)) {
+    return object.map(function (object) {
       return encodeCBObject(object);
     });
   } else {
-    return encodeCBObject(value);
+    return encodeCBObject(object);
   }
 };
+
+/**
+ * 解析对象
+ * @param object
+ * @param key
+ * @return {*}
+ * @private
+ */
+CB._decode = function (object, key) {
+  if(!_.isObject(object) || _.isDate(object)) return object;
+  if(_.isArray(object)) {
+    return _.map(object, function (child) {
+      return CB._decode(child);
+    });
+  }
+  if(object instanceof CB.Object) return object;
+  if(object instanceof CB.File) return object;
+  if(object.__type === 'Pointer') {
+    const pointer = CB.Object._create(object.className);
+    pointer._hasPoniterData = _.keys(object).length > 3;
+    return pointer;
+  }
+  if(object.__type === 'Relation') {
+    if(!key) throw new Error('key missing decoding a Relation');
+    const relation = new CB.Relation(null, key);
+    relation.targetClassName = object.className;
+    return relation;
+  }
+  if(object.__type === 'File') {
+    return new CB.File(object.name);
+  }
+  return _.mapValues(object, CB._decode);
+};
+
+
 
 
 module.exports = CB;

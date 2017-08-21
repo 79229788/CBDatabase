@@ -3,7 +3,7 @@ const moment = require('moment');
 const shortId = require('shortid');
 const Condition = require('./crud_condition');
 
-//********** Transaction ActionBlock Demo
+//********** Transaction Action Block Demo
 // (async () => {
 //   const client = await CB.pg.connect();
 //   try {
@@ -294,6 +294,9 @@ module.exports = function (CB) {
         SET
           ${_.map(object, (value, key) => {
             index++;
+            if(key.indexOf(':increment') > 0) {
+              return `"${key.replace(':increment', '')}" = "${key.replace(':increment', '')}" ${value < 0 ? '-' : '+'} $${index}`;
+            }
             return `"${key}" = $${index}`;
           }).join(',')}
         WHERE
