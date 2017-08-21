@@ -1,0 +1,6 @@
+{
+  "apps": [{
+    "name"    : "CBDatabase",
+    "script"  : "./app.js"
+  }]
+}
