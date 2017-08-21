@@ -91,18 +91,29 @@ CB.initOSS({
 // })();
 
 const Customer = CB.Object.extend('Customer');
-const User = CB.Object.extend('_User');
-const user = new User();
-user.set('name', 'duyang');
-user.set('sex', 1);
-user.increment('number', 1);
+const CustomerCate = CB.Object.extend('CustomerCate');
+const Company = CB.Object.extend('Company');
 
-console.log(user);
-// user.save().then(function (data) {
-//   console.log(data);
-// }, function (error) {
-//   console.log(error);
-// });
+const customer = new Customer();
+customer.set('name', '客户Code');
+customer.increment('number', 1);
+
+const cate = new CustomerCate();
+cate.set('name', '分类Code');
+const company = new Company();
+company.set('name', '公司Code');
+cate.set('company', company);
+customer.set('cate', cate);
+
+//console.log(customer);
+
+//CB.Object.saveAll([customer]);
+
+customer.save().then(function (data) {
+  //console.log(data);
+}, function (error) {
+  console.log(error);
+});
 
 
 

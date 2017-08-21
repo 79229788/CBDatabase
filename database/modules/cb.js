@@ -44,8 +44,8 @@ const inherits = function inherits(parent, protoProps, staticProps) {
   return child;
 };
 
-CB._parseDate = function (dataString) {
-  return moment(dataString).format('YYYY-MM-DD HH:mm:ss');
+CB._parseDate = function (date) {
+  return moment(date).format('YYYY-MM-DD HH:mm:ss');
 };
 
 // Helper function to get a value from a Backbone object as a property
@@ -64,100 +64,86 @@ CB._extend = function (protoProps, classProps) {
   return child;
 };
 
-/**
- * 转化普通对象为CBObject
- */
-CB._encode = function (object) {
+// 深度遍历CBObject属性
+CB._traverse = function (object, func) {
   if(object instanceof CB.Object) {
-    if(!object._hasPoniterData) {
-      return object.toPointer();
-    }
-    if(!object.isChanged()) {
-      seenObjects = seenObjects.concat(object);
-      return CB._encode(object._toFullJSON(seenObjects), seenObjects, disallowObjects);
-    }
-    throw new Error("Tried to save an object with a pointer to a new, unsaved object.");
+    CB._traverse(object.attributes, func);
+    return func(object);
   }
-  if (_.isDate(object)) {
-    return { "__type": "Date", "iso": object.toJSON() };
+  if(object instanceof CB.Relation || object instanceof CB.File) {
+    return func(object);
   }
-  if (_.isArray(object)) {
-    return _.map(object, function (x) {
-      return CB._encode(x, seenObjects, disallowObjects);
+  if(_.isArray(object)) {
+    _.each(object, function (child, index) {
+      const newChild = CB._traverse(child, func);
+      if (newChild) object[index] = newChild;
     });
+    return func(object);
   }
-  if (_.isRegExp(object)) {
-    return object.source;
-  }
-  if (object instanceof CB.Relation) {
-    return object.toJSON();
-  }
-  if (object instanceof CB.File) {
-    if (!object.url() && !object.id) {
-      throw new Error("Tried to save an object containing an unsaved file.");
-    }
-    return object._toFullJSON();
-  }
-  if (_.isObject(object)) {
-    return _.mapValues(object, function (object) {
-      return CB._encode(object, seenObjects, disallowObjects);
+  if(_.isObject(object)) {
+    _.each(object, function (child, key) {
+      const newChild = CB._traverse(child, func);
+      if (newChild) object[key] = newChild;
     });
+    return func(object);
   }
-  return object;
-};
-CB._encodeObjectOrArray = function (object) {
-  function encodeCBObject(object) {
-    if (object && object._toFullJSON) {
-      object = object._toFullJSON([]);
-    }
-
-    return _.mapValues(object, function (object) {
-      return CB._encode(object, []);
-    });
-  }
-
-  if (_.isArray(object)) {
-    return object.map(function (object) {
-      return encodeCBObject(object);
-    });
-  } else {
-    return encodeCBObject(object);
-  }
+  return func(object);
 };
 
 /**
- * 解析对象
+ * 编码对象（普通对象 -> CBObject）
  * @param object
  * @param key
  * @return {*}
  * @private
  */
-CB._decode = function (object, key) {
+CB._encode = function (object, key) {
   if(!_.isObject(object) || _.isDate(object)) return object;
   if(_.isArray(object)) {
-    return _.map(object, function (child) {
-      return CB._decode(child);
-    });
+    return _.map(object, child => CB._encode(child));
   }
   if(object instanceof CB.Object) return object;
   if(object instanceof CB.File) return object;
   if(object.__type === 'Pointer') {
     const pointer = CB.Object._create(object.className);
-    pointer._hasPoniterData = _.keys(object).length > 3;
+    pointer._hasData = _.keys(object).length > 3;
     return pointer;
   }
-  if(object.__type === 'Relation') {
-    if(!key) throw new Error('key missing decoding a Relation');
-    const relation = new CB.Relation(null, key);
-    relation.targetClassName = object.className;
-    return relation;
-  }
+  // if(object.__type === 'Relation') {
+  //   if(!key) throw new Error('key missing decoding a Relation');
+  //   const relation = new CB.Relation(null, key);
+  //   relation.targetClassName = object.className;
+  //   return relation;
+  // }
   if(object.__type === 'File') {
     return new CB.File(object.name);
   }
-  return _.mapValues(object, CB._decode);
+  return _.mapValues(object, CB._encode);
 };
 
+/**
+ * 解析对象（CBObject 转化为 普通对象）
+ * @param object  CBObject
+ * @return {*}
+ * @private
+ */
+CB._decode = function (object) {
+  if(_.isDate(object)) return CB._parseDate(object);
+  if(_.isArray(object)) {
+    return _.map(object, child => CB._decode(child));
+  }
+  if(object instanceof CB.Object) {
+    const origin = _.cloneDeep(object.attributes);
+    if(object.id) origin.objectId = object.id;
+    return CB._decode(origin);
+  }
+  //if(object instanceof CB.Relation) return CB._decode(object);
+  //if(object instanceof CB.File) return CB._decode(object);
+  if(_.isObject(object)) {
+    return _.mapValues(object, value => CB._decode(value));
+  }
+  return object;
+};
 
 
 

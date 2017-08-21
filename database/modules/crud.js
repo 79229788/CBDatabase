@@ -258,7 +258,7 @@ module.exports = function (CB) {
       });
       const spl = `
         INSERT INTO 
-          "${className}" ("${_.keys(object).join('","')}") 
+          "${className}" ("${_.keys(object).map(value => value.replace(':increment', ''))}).join('","')}") 
         VALUES
           (${_.map(new Array(_.size(object)), (value, index) => {
             return '$' + (index + 1);

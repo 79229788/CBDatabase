@@ -13,9 +13,10 @@ module.exports = function (CB) {
     attributes = attributes || {};
     if(attributes.constructor === this.constructor) attributes = attributes.toOrigin();
     this.parseDefaultDate(attributes);
-    this._hasPoniterData = false;
     this.cid = _.uniqueId('c');
-    this._previousAttributes = _.cloneDeep(this.set(attributes).attributes);
+    this.set(attributes);
+    this._hasData = true;
+    this._previousAttributes = _.cloneDeep(this.attributes);
     this.init.apply(this, arguments);
   };
 
@@ -46,13 +47,6 @@ module.exports = function (CB) {
 
     getUpdatedAt: function () {
       return this.get('updatedAt');
-    },
-    /**
-     * 克隆模型
-     * @return {CB}
-     */
-    clone: function() {
-      return new this.constructor(this.toOrigin());
     },
     /**
      * 是否已被修改
@@ -90,7 +84,7 @@ module.exports = function (CB) {
         attrs = _.extend({}, this.attributes, key);
       } else {
         checkReservedKey(key);
-        attrs[key] = CB._decode(value, key);
+        attrs[key] = CB._encode(value, key);
       }
       if(attrs.objectId) {
         this.id = attrs.objectId;
@@ -117,44 +111,17 @@ module.exports = function (CB) {
      * @return {string}
      */
     toJSON: function () {
-      const json = this._toFullJSON();
-      delete json['__type'];
-      delete json['className'];
-      return json;
-    },
-    _toFullJSON: function () {
-      const json = _.cloneDeep(this.attributes);
-      _.each(json, function (val, key) {
-        json[key] = CB._encode(val);
-      });
-      _.each(this._operations, function (val, key) {
-        json[key] = val;
-      });
-      if (_.has(this, "id")) {
-        json.objectId = this.id;
-      }
-      _(['createdAt', 'updatedAt']).each(function (key) {
-        if (_.has(_this, key)) {
-          const val = _this[key];
-          json[key] = _.isDate(val) ? val.toJSON() : val;
-        }
-      });
-      json.__type = "Object";
-      json.className = this.className;
-      return json;
+      return JSON.stringify(this.toOrigin());
     },
     /**
      * 转化为原始数据
      * @return {object}
      */
     toOrigin: function () {
-      return _.extend({}, this.attributes, !_.isUndefined(this.id) ? {
-        objectId: this.id
-      } : {});
+      return CB._decode(this);
     },
     /**
-     * 当前对象转为引用对象(无完整数据）
-     * @private
+     * 对象转为引用对象(无完整数据）
      */
     toPointer: function () {
       return {
@@ -166,52 +133,82 @@ module.exports = function (CB) {
 
 
 
+
     /**
      * 保存数据
      * @return {*}
      */
-    save: function () {
-      const unsavedChildren = [];
-      const unsavedFiles = [];
-      CB.Object._findUnsavedChildren(this, unsavedChildren, unsavedFiles);
-      if (unsavedChildren.length + unsavedFiles.length > 0) {
-        return CB.Object._deepSaveAsync(this).then(() => {
-          return this.save();
-        });
-      }
-
-      return this;
+    save: async function () {
+      return await CB.Object._deepSaveAsync(this);
     }
 
   });
-
-
+  /**
+   * 保存全部对象
+   * @param list
+   */
+  CB.Object.saveAll = function (list) {
+    return CB.Object._deepSaveAsync(list);
+  };
 
   /**
-   * 查找未保存的子对象
+   * 深度查找未保存的子项
    * @param model
    * @param children
    * @param files
    * @private
    */
-  CB.Object._findUnsavedChildren = function (model, children, files) {
-    _.each(model.attributes, (value) => {
-      if (value instanceof CB.Object) {
-        if (model.isChanged()) children.push(value);
-      }else if(value instanceof CB.File) {
-        if (!value.url() && !value.id) files.push(value);
+  CB.Object._deepFindUnsavedChildren = function (model, children, files) {
+    children = children || [];
+    files = files || [];
+    CB._traverse(model.attributes, (_model) => {
+      if (_model instanceof CB.Object) {
+        if (_model.isChanged()) children.push(_model);
+      }else if(_model instanceof CB.File) {
+        if (!_model.url() && !_model.id) files.push(_model);
       }
     });
   };
+  /**
+   * 深度保存子对象
+   * @param model
+   * @param children
+   * @param files
+   * @private
+   */
+  CB.Object._deepSaveAsync = async function (model, children, files) {
+    const unsavedChildren = children || [];
+    const unsavedFiles = files || [];
+    CB.Object._deepFindUnsavedChildren(model, unsavedChildren, unsavedFiles);
+    let unsavedModels = [];
+    model = _.isArray(model) ? model : [model];
+    model.forEach((child) => {
+      if(child.isChanged()) unsavedModels.push(child);
+    });
+    unsavedModels = unsavedChildren.concat(unsavedModels);
+    //保存所有模型到服务器
+    const savedModels = [];
+    const groupUnsavedModels = _.groupBy(unsavedModels, model => model.className);
+    let prevPointer = '';
+    for(let key of Object.keys(groupUnsavedModels)) {
+      const items = groupUnsavedModels[key];
+      for(let item of items) {
+        await CB.crud.save(item.className, item.toOrigin());
 
-  CB.Object._deepSaveAsync = function (model) {
-    let unsavedChildren = [];
-    let unsavedFiles = [];
-    CB.Object._findUnsavedChildren(model, unsavedChildren, unsavedFiles);
+      }
 
+
+    }
+    return;
+    for(let i = 0; i < unsavedModels.length; i ++) {
+      const model = unsavedModels[i];
+      console.log(model.toOrigin());
+      //await CB.crud.save(model.className, model.toOrigin());
+      //model.id = object.objectId;
+      savedModels.push(model);
+    }
+    return savedModels.slice(0, model.length);
   };
-
-
 
 
   //********************************其它
