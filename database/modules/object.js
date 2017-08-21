@@ -100,7 +100,7 @@ module.exports = function (CB) {
       return this;
     },
     /**
-     * 增量设置数据
+     * 设置增量数据
      * @param key
      * @param value
      * @return {CB}
