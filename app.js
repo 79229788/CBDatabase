@@ -2,7 +2,7 @@ const CB = require('./database');
 const config_postgres = require('./config/postgres');
 const config_oss = require('./config/oss');
 
-CB.init({
+CB.initPG({
   host     : config_postgres.postgres.host,
   port     : config_postgres.postgres.port,
   user     : config_postgres.postgres.user,
@@ -14,7 +14,7 @@ CB.initOSS({
   region          : config_oss.oss.region,
   accessKeyId     : config_oss.oss.accessKeySecret,
   accessKeySecret : config_oss.oss.accessKeySecret,
-  bucket          : '',
+  bucket          : 'erp-user-norm',
 });
 
 (async () => {

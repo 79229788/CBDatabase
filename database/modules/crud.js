@@ -5,7 +5,7 @@ const Condition = require('./crud_condition');
 
 //********** Transaction ActionBlock Demo
 // (async () => {
-//   const client = await CB.pool.connect();
+//   const client = await CB.pg.connect();
 //   try {
 //     await client.query('BEGIN');
 //     //query...
@@ -202,7 +202,7 @@ module.exports = function (CB) {
         LIMIT ${opts.limit}
       `;
       printSql(spl, className, 'find');
-      const _client = client || CB.pool;
+      const _client = client || CB.pg;
       try {
         const result = await _client.query(spl);
         switch (type) {
@@ -266,7 +266,7 @@ module.exports = function (CB) {
       `;
       printSql(spl, className, 'insert');
       const params = _.values(object);
-      const _client = client || await CB.pool.connect();
+      const _client = client || await CB.pg.connect();
       try {
         await _client.query(spl, params);
         return object;
@@ -301,7 +301,7 @@ module.exports = function (CB) {
       `;
       printSql(spl, className, 'update');
       const params = _.values(object);
-      const _client = client || await CB.pool.connect();
+      const _client = client || await CB.pg.connect();
       try {
         await _client.query(spl, params);
         return object;
@@ -325,7 +325,7 @@ module.exports = function (CB) {
           "objectId" = '${objectId}'" 
       `;
       printSql(spl, className, 'delete');
-      const _client = client || await CB.pool.connect();
+      const _client = client || await CB.pg.connect();
       try {
         await _client.query(spl);
         return 'ok';
@@ -343,7 +343,7 @@ module.exports = function (CB) {
    * @param type
    */
   function printSql(sql, className, type) {
-    if(CB.config.printSql) {
+    if(CB.pgConfig.printSql) {
       sql = `↓[Database ${type} class ${className}: ${moment().format('YYYY-MM-DD HH:mm:ss')}]\n` + sql;
       sql = sql.replace(/\n+/g, '\n');
       sql = sql.replace(/\s*,/g, ',\n ');

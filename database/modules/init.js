@@ -8,8 +8,8 @@ const OSS = require('ali-oss');
  * 初始化数据库
  * @param config
  */
-CB.init = function (config) {
-  CB.config = _.extend({
+CB.initPG = function (config) {
+  CB.pgConfig = _.extend({
     host     : '',
     port     : 0,
     user     : '',
@@ -17,8 +17,8 @@ CB.init = function (config) {
     database : '',
     printSql : false,
   }, config || {});
-  CB.pool = new PG.Pool(CB.config);
-  CB.pool.on('error', (error, client) => {
+  CB.pg = new PG.Pool(CB.pgConfig);
+  CB.pg.on('error', (error, client) => {
     console.error('Unexpected error on idle client', error);
     process.exit(-1);
   });
@@ -35,7 +35,7 @@ CB.initOSS = function (config) {
     accessKeySecret : '',
     bucket          : '',
   }, config || {});
-  CB.client = new OSS(CB.ossConfig);
+  CB.oss = new OSS(CB.ossConfig);
 };
 
 
