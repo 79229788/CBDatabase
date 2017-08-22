@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const CB = require('./database');
 const config_postgres = require('./config/postgres');
 const config_oss = require('./config/oss');
@@ -23,8 +24,9 @@ CB.initOSS({
 //       conditionCollection: [
 //         {
 //           name: 'name',
-//           key: 'cate',
-//           type: 'exist'
+//           key: 'name',
+//           value: 'Code',
+//           type: 'containsText'
 //         }
 //       ],
 //       conditionJoins: 'name',
@@ -44,14 +46,13 @@ CB.initOSS({
 //           type: 'pointer',
 //           className: 'Company',
 //           conditionCollection: [
-//             {
-//               name: 'name',
-//               key: 'number',
-//               value: 1,
-//               type: 'equal'
-//             }
+//             // {
+//             //   name: 'name',
+//             //   key: 'number',
+//             //   value: 1,
+//             //   type: 'equal'
+//             // }
 //           ],
-//           conditionJoins: 'name',
 //           orderCollection: [
 //             {
 //               key: 'number',
@@ -92,30 +93,36 @@ CB.initOSS({
 
 const Customer = CB.Object.extend('Customer');
 const CustomerCate = CB.Object.extend('CustomerCate');
+const CustomerLevel = CB.Object.extend('CustomerLevel');
 const Company = CB.Object.extend('Company');
 
-const customer = new Customer();
-customer.set('name', '客户Code');
-customer.increment('number', 1);
-
-const cate = new CustomerCate();
-cate.set('name', '分类Code');
-const company = new Company();
-company.set('name', '公司Code');
-cate.set('company', company);
-customer.set('cate', cate);
-
-//console.log(customer);
-
-//CB.Object.saveAll([customer]);
-
-customer.save().then(function (data) {
-  //console.log(data);
-}, function (error) {
-  console.log(error);
-});
-
-
+// (async () => {
+//   const client = await CB.pg.connect();
+//   try {
+//     await client.query('BEGIN');
+//
+//     const customer = new Customer();
+//     customer.set('name', '客户Code2');
+//     customer.set('levels', _.map(new Array(3), (value, index) => {
+//       const company = new Company();
+//       company.id = 'Bkk_6OBea';
+//       const level = new CustomerLevel();
+//       level.set('name', '等级Code' + index);
+//       level.set('company', company);
+//       return level;
+//     }));
+//
+//     const res = await customer.save(client);
+//     console.log(res);
+//
+//     await client.query('COMMIT');
+//   }catch (error) {
+//     await client.query('ROLLBACK');
+//     console.log(error);
+//   }finally {
+//     client.release();
+//   }
+// })().catch(e => console.log(e.message));
 
 
 

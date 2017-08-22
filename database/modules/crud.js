@@ -238,9 +238,9 @@ module.exports = function (CB) {
      */
     save: async function (className, object, client) {
       if(object.objectId) {
-        await this.update(className, object, client);
+        return await this.update(className, object, client);
       }else {
-        await this.create(className, object, client);
+        return await this.create(className, object, client);
       }
     },
     /**
@@ -258,7 +258,7 @@ module.exports = function (CB) {
       });
       const spl = `
         INSERT INTO 
-          "${className}" ("${_.keys(object).map(value => value.replace(':increment', ''))}).join('","')}") 
+          "${className}" ("${_.keys(object).map(key => key.replace(':increment', '')).join('","')}") 
         VALUES
           (${_.map(new Array(_.size(object)), (value, index) => {
             return '$' + (index + 1);
