@@ -40,27 +40,34 @@ module.exports = function (CB) {
       this._queryOptions.selectCollection.push(keys);
     },
     /**
-     * 内嵌查询[简易版：会完整返回嵌套的子类数据]
-     * @param string 查询字段
-     * 支持5层嵌套，若有array类型，该类型则必须作为最后一层出现
-     * 例: 字段[类型:表名]
-     * include('product[single:Product]')
-     * include('product.cate[single:ProductCate]')
-     * include('product.cate.levels[array:ProductLevel]')
+     * 内嵌查询[内嵌的是独立对象][简易版：会完整返回嵌套的子类数据]
+     * @param key 查询字段（支持5层嵌套，嵌套连接请使用"."）
+     * 例如：product.cate.user
+     * @param objectClass
      */
-    include: function (string) {
-      if(!/^(\S*[^\[])\[(single|array):(\S*[^\]])\]$/.test(string)) throw new Error('[CB QUERY ERROR] include 格式错误，请使用"字段[类型(single|array):表名]"，例如include("product[single:Product]")');
-      string = string.replace(/ /g, '');
+    include: function (key, objectClass) {
       this._queryOptions.includeCollection.push({
-        key: string.split('[')[0],
-        type: string.indexOf('single') > 0 ? 'single' : 'array',
-        className: string.split(':')[1].replace(']', '')
+        key: '^' + key,
+        type: 'single',
+        className: objectClass.prototype.className
+      });
+    },
+    /**
+     * 内嵌查询[内嵌的是数组对象][简易版：会完整返回嵌套的子类数据]
+     * @param key 查询字段（支持5层嵌套，嵌套连接请使用"."）
+     * 例如：product.cate.levels，该类型只能作为最后一层出现
+     * @param objectClass
+     */
+    includeArray: function (key, objectClass) {
+      this._queryOptions.includeCollection.push({
+        key: '^' + key,
+        type: 'array',
+        className: objectClass.prototype.className
       });
     },
     /**
      * 内嵌查询[高级版：同简易版，并额外支持条件查询和指定排序]
-     * @param key 查询字段
-     * 支持5层嵌套，嵌套连接请使用"."，
+     * @param key 查询字段（支持5层嵌套，嵌套连接请使用"."）
      * 例如：product.cate.user，不支持array类型的嵌套查询！
      * @param object CBObject
      */
@@ -68,7 +75,7 @@ module.exports = function (CB) {
       _.remove(this._queryOptions.includeCollection, item => item.key === key);
       if(!(object instanceof CB.InnerQuery)) throw new Error('[CB QUERY ERROR] matchesQuery 必须使用CB.InnerQuery构建');
       this._queryOptions.includeCollection.push({
-        key: key,
+        key: '^' + key,
         type: 'single',
         className: object.className,
         conditionJoins: object._queryOptions.conditionJoins,

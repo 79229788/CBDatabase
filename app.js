@@ -24,17 +24,11 @@ const CustomerCate = CB.Object.extend('CustomerCate');
 const CustomerLevel = CB.Object.extend('CustomerLevel');
 const Company = CB.Object.extend('Company');
 
-const innerInnerQuery = new CB.InnerQuery('Company');
-//innerInnerQuery.equalTo('name', '公司1');
-
-const innerQuery = new CB.InnerQuery('CustomerCate');
-innerQuery.equalTo('name', '供货商');
-innerQuery.ascending('number');
 
 const query = new CB.Query('Customer');
-query.matchesQuery('cate', innerQuery);
-//query.matchesQuery('cate.company', innerInnerQuery);
-query.count().then(function (data) {
+query.include('cate', CustomerCate);
+query.include('cate.company', Company);
+query.first().then(function (data) {
   console.log(JSON.stringify(data));
 }).catch(function (error) {
   console.log(error);

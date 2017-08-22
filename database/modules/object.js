@@ -76,6 +76,7 @@ module.exports = function (CB) {
      */
     set: function set(key, value) {
       if(!key) return this;
+      if(key.indexOf('^') > -1 || key.indexOf('.') > -1) throw new Error('[CBOBJECT ERROR] 字段命名中不允许使用.和^，请修改后重试！');
       let attrs = this.attributes || {};
       if (_.isObject(key)) {
         _.each(key, (value, key) => {

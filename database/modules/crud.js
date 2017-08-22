@@ -79,8 +79,8 @@ module.exports = function (CB) {
           if(object.key.indexOf('.') > -1) {
             const arr = object.key.split('.');
             if(arr.length > 5) throw new Error('[DATABASE FIND ERROR] - include查询最多仅支持5层嵌套，请规范使用！');
-            const prve = _.clone(arr);prve.pop();
-            _className = _.find(opts.includeCollection, {key: prve.join('.')}).className;
+            const prev = _.clone(arr);prev.pop();
+            _className = _.find(opts.includeCollection, {key: prev.join('.')}).className;
             _tailKey = arr[arr.length - 1];
           }
           if(object.type === 'array') {
@@ -106,7 +106,7 @@ module.exports = function (CB) {
             }
             joinsRelationClause += `
               LEFT JOIN "${object.className}"
-              ON "${object.className}"."objectId" = "${_className}"."${_tailKey}" ->> 'objectId'
+              ON "${object.className}"."objectId" = "${_className}"."${_tailKey.replace(/^\^/, '')}" ->> 'objectId'
             `;
           }
         });
@@ -217,10 +217,13 @@ module.exports = function (CB) {
               _.each(row, (value, key) => {
                 if(key.indexOf('.') > 0) {
                   const arr = key.split('.');
-                  if(arr.length === 2 && row[arr[0]] && row[arr[0]][arr[1]]) row[arr[0]][arr[1]] = value;
-                  if(arr.length === 3 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]]) row[arr[0]][arr[1]][arr[2]] = value;
-                  if(arr.length === 4 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]]) row[arr[0]][arr[1]][arr[2]][arr[3]] = value;
-                  if(arr.length === 5 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]] && row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]]) row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]] = value;
+                  if(arr.length === 2 && row[arr[0]] && row[arr[0]][arr[1]]) _.extend(row[arr[0]][arr[1]], value);
+                  if(arr.length === 3 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]]) _.extend(row[arr[0]][arr[1]][arr[2]], value);
+                  if(arr.length === 4 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]]) _.extend(row[arr[0]][arr[1]][arr[2]][arr[3]], value);
+                  if(arr.length === 5 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]] && row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]]) _.extend(row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]], value);
+                  delete row[key];
+                }else if(key.indexOf('^') === 0) {
+                  _.extend(row[key.substr(1)], value);
                   delete row[key];
                 }
               });
