@@ -13,88 +13,105 @@ CB.initPG({
 });
 CB.initOSS({
   region          : config_oss.oss.region,
-  accessKeyId     : config_oss.oss.accessKeySecret,
+  accessKeyId     : config_oss.oss.accessKeyId,
   accessKeySecret : config_oss.oss.accessKeySecret,
   bucket          : 'erp-user-norm',
 });
 
-// (async () => {
-//   try {
-//     const data = await CB.crud.find('Customer', 'find', {
-//       conditionCollection: [
-//         {
-//           name: 'name',
-//           key: 'name',
-//           value: 'Code',
-//           type: 'containsText'
-//         }
-//       ],
-//       conditionJoins: 'name',
-//       includeCollection: [
-//         {
-//           key: 'levels',
-//           type: 'array',
-//           className: 'CustomerLevel',
-//         },
-//         {
-//           key: 'cate',
-//           type: 'pointer',
-//           className: 'CustomerCate',
-//         },
-//         {
-//           key: 'cate.company',
-//           type: 'pointer',
-//           className: 'Company',
-//           conditionCollection: [
-//             // {
-//             //   name: 'name',
-//             //   key: 'number',
-//             //   value: 1,
-//             //   type: 'equal'
-//             // }
-//           ],
-//           orderCollection: [
-//             {
-//               key: 'number',
-//               type: 'desc',
-//             },
-//           ]
-//         },
-//         {
-//           key: 'cate.company.user',
-//           type: 'pointer',
-//           className: 'User',
-//         },
-//       ],
-//       orderCollection: [
-//         // {
-//         //   key: 'objectId',
-//         //   type: 'asc',
-//         // },
-//       ],
-//     });
-//     console.log(JSON.stringify(data));
-//   }catch (error) {
-//     console.log(error);
-//   }
-// })();
+(async () => {
+  try {
+    const data = await CB.crud.find('Customer', 'find', {
+      conditionCollection: [
+        {
+          name: 'name',
+          key: 'name',
+          value: 'Code',
+          type: 'containsText'
+        }
+      ],
+      conditionJoins: 'name',
+      includeCollection: [
+        {
+          key: 'levels',
+          type: 'array',
+          className: 'CustomerLevel',
+        },
+        {
+          key: 'cate',
+          type: 'pointer',
+          className: 'CustomerCate',
+        },
+        {
+          key: 'avatar',
+          type: 'pointer',
+          className: '_File',
+        },
+        {
+          key: 'cate.company',
+          type: 'pointer',
+          className: 'Company',
+          conditionCollection: [
+            // {
+            //   name: 'name',
+            //   key: 'number',
+            //   value: 1,
+            //   type: 'equal'
+            // }
+          ],
+          orderCollection: [
+            {
+              key: 'number',
+              type: 'desc',
+            },
+          ]
+        },
+        {
+          key: 'cate.company.user',
+          type: 'pointer',
+          className: 'User',
+        },
+      ],
+      orderCollection: [
+        // {
+        //   key: 'objectId',
+        //   type: 'asc',
+        // },
+      ],
+    });
+    console.log(JSON.stringify(data));
+  }catch (error) {
+    console.log(error);
+  }
+})();
 
-// (async () => {
-//   try {
-//     await CB.crud.save('CustomerCate', {
-//       objectId: 'ryoknbP_Z',
-//       number: 1
-//     });
-//     console.log('save success');
-//   }catch (error) {
-//     console.log(error);
-//   }
-// })();
+(async () => {
+  try {
+    await CB.crud.save('CustomerCate', {
+      objectId: 'ryoknbP_Z',
+      number: 1
+    });
+    console.log('save success');
+  }catch (error) {
+    console.log(error);
+  }
+})();
 
 const Customer = CB.Object.extend('Customer');
 const CustomerCate = CB.Object.extend('CustomerCate');
 const CustomerLevel = CB.Object.extend('CustomerLevel');
 const Company = CB.Object.extend('Company');
+
+
+
+
+// const bytes = [0xBE, 0xEF, 0xCA, 0xFE];
+// const byteArrayFile = new CB.File('myfile.txt', bytes);
+// byteArrayFile.save().then((file) => {
+//   console.log(file);
+// }).catch((error) => {
+//   console.log(error);
+// });
+
 
 // (async () => {
 //   const client = await CB.pg.connect();
@@ -103,7 +120,7 @@ const Company = CB.Object.extend('Company');
 //
 //     const customer = new Customer();
 //     customer.set('name', '客户Code2');
-//     customer.set('levels', _.map(new Array(3), (value, index) => {
+//     customer.set('levels', _.map(new Array(2), (value, index) => {
 //       const company = new Company();
 //       company.id = 'Bkk_6OBea';
 //       const level = new CustomerLevel();
@@ -111,6 +128,10 @@ const Company = CB.Object.extend('Company');
 //       level.set('company', company);
 //       return level;
 //     }));
+//     const data = { base64: '6K+077yM5L2g5Li65LuA5LmI6KaB56C06Kej5oiR77yf' };
+//     const file = new CB.File('avatar', data);
+//     await file.save(client);
+//     customer.set('avatar', file);
 //
 //     const res = await customer.save(client);
 //     console.log(res);

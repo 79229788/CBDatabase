@@ -122,7 +122,7 @@ CB._encode = function (object, key) {
 };
 
 /**
- * 解析对象（CBObject 转化为 普通对象）
+ * 解析对象（CBObject || CBFile 转化为 普通对象）
  * @param object  CBObject
  * @return {*}
  * @private
@@ -132,13 +132,12 @@ CB._decode = function (object) {
   if(_.isArray(object)) {
     return _.map(object, child => CB._decode(child));
   }
-  if(object instanceof CB.Object) {
+  if(object instanceof CB.Object || object instanceof CB.File) {
     const origin = _.cloneDeep(object.attributes);
     if(object.id) origin.objectId = object.id;
     return CB._decode(origin);
   }
   //if(object instanceof CB.Relation) return CB._decode(object);
-  //if(object instanceof CB.File) return CB._decode(object);
   if(_.isObject(object)) {
     return _.mapValues(object, value => CB._decode(value));
   }

@@ -132,13 +132,10 @@ module.exports = function (CB) {
     },
     /**
      * 获取所有子类（不是深度获取）
-     * @return *{key: 有子类的属性，data: 对应的models};
+     * @return *{有子类的属性: 对应的models};
      */
     getChildren: function () {
-      const child = {
-        key: '',
-        models: []
-      };
+      const child = {};
       _.each(this.attributes, (value, key) => {
         if(_.isArray(value)) {
           value.forEach((item) => {
@@ -149,9 +146,9 @@ module.exports = function (CB) {
         }
       });
       function insert(model, key) {
-        if(model instanceof CB.Object) {
-          child.key = key;
-          child.models.push(model);
+        if(model instanceof CB.Object || model instanceof CB.File) {
+          if(!child[key]) child[key] = [];
+          child[key].push(model);
         }
       }
       return child;
@@ -190,7 +187,7 @@ module.exports = function (CB) {
       if (_model instanceof CB.Object) {
         if (_model.isChanged()) children.push(_model);
       }else if(_model instanceof CB.File) {
-        if (!_model.url() && !_model.id) files.push(_model);
+        if (!_model.getUrl() && !_model.id) files.push(_model);
       }
     });
   };
@@ -205,38 +202,42 @@ module.exports = function (CB) {
     const unsavedFiles = [];
     CB.Object._deepFindUnsavedChildren(model, unsavedChildren, unsavedFiles);
     let unsavedModels = [];
-    model = _.isArray(model) ? model : [model];
-    model.forEach((child) => {
-      if(child.isChanged()) unsavedModels.push(child);
-    });
+    if(_.isArray(model)) {
+      model.forEach((child) => {
+        if(child.isChanged()) unsavedModels.push(child);
+      });
+    }else {
+      unsavedModels = [model];
+    }
     unsavedModels = unsavedChildren.concat(unsavedModels);
     //保存所有模型到服务器
     const savedModels = [];
     for(let model of unsavedModels) {
-      const childData = model.getChildren();
-      const childs = childData.models;
-      const key = childData.key;
-      if(key && childs.length > 0) {
-        //存在子类时，先保存全部子类
-        const savedChilds = [];
-        for(child of childs) {
-          if(!child.id || child.id && child.isChanged()) {
-            const saved = await CB.crud.save(child.className, child.toOrigin(), client);
-            child.id = saved.objectId;
+      const children = model.getChildren();
+      for(let key of Object.keys(children)) {
+        const childs = children[key];
+        if(childs.length > 0) {
+          //存在子类时，先保存全部子类
+          const savedChilds = [];
+          for(child of childs) {
+            if(!child.id || child.id && !(child instanceof CB.File) &&  child.isChanged()) {
+              const saved = await CB.crud.save(child.className, child.toOrigin(), client);
+              child.id = saved.objectId;
+            }
+            savedChilds.push(child);
           }
-          savedChilds.push(child);
+          //然后在保存父类并储存其子类的pointer信息
+          const pointers = savedChilds.map(model => model.getPointer());
+          model.set(key, JSON.stringify(_.isArray(model.get(key)) ? pointers : pointers[0]));
         }
-        //然后在保存父类并储存其子类的pointer信息
-        const pointers = savedChilds.map(model => model.getPointer());
-        model.set(key, JSON.stringify(_.isArray(model.get(key)) ? pointers : pointers[0]));
-      }
-      if(!model.id || model.id && model.isChanged()) {
-        const saved = await CB.crud.save(model.className, model.toOrigin(), client);
-        model.id = saved.objectId;
+        if(!model.id || model.id && !(model instanceof CB.File) && model.isChanged()) {
+          const saved = await CB.crud.save(model.className, model.toOrigin(), client);
+          model.id = saved.objectId;
+        }
       }
       savedModels.push(model);
     }
-    return savedModels;
+    return model;
   };
 
 

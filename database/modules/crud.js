@@ -256,6 +256,10 @@ module.exports = function (CB) {
         createdAt: new Date(),
         updatedAt: new Date()
       });
+      if(object['objectId:override']) {
+        object.objectId = object['objectId:override'];
+        delete object['objectId:override'];
+      }
       const spl = `
         INSERT INTO 
           "${className}" ("${_.keys(object).map(key => key.replace(':increment', '')).join('","')}") 

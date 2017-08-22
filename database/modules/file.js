@@ -1,4 +1,7 @@
 const _ = require('lodash');
+const shortId = require('shortid');
+const co = require('co');
+const parseBase64 = require('./utils/parse-base64');
 
 module.exports = function (CB) {
   const hexOctet = function hexOctet() {
@@ -45,14 +48,30 @@ module.exports = function (CB) {
     });
     return chunks.join("");
   };
+  /**
+   * OSSBuffer上传（Promise包装）
+   * @param key
+   * @param value
+   * @return {Promise.<void>}
+   * @constructor
+   */
+  CB._uploadBuffer = async function (key, value) {
+    try {
+      return await co(function* () {
+        return yield CB.oss.put(key, value);
+      });
+    }catch(e) {
+      throw new Error('[OSS Buffer UPLOAD ERROR]' + error.message);
+    }
+  };
 
-  CB.File = function (name, data) {
+  CB.File = function (name, data, mimeType) {
     this.attributes = {
       name: name,
       url: '',
       metaData: {},
-      // 用来存储转换后要上传的 base64 String
-      base64: ''
+      provider: '',
+      mimeType: '',
     };
     if (_.isString(data)) {
       throw new TypeError("Creating an AV.File from a String is not yet supported.");
@@ -66,70 +85,187 @@ module.exports = function (CB) {
     let owner = null;
     if (data && data.owner) owner = data.owner;
     this.attributes.metaData.owner = owner ? owner.id : 'unknown';
+    if(mimeType) this.set('mimeType', mimeType);
   };
   /**
-   * Creates a fresh AV.File object with exists url for saving to CB Server.
-   * @param {String} name the file name
-   * @param {String} url the file url.
-   * @param {Object} [metaData] the file metadata object.
-   * @param {String} [type] Content-Type header to use for the file. If
-   *     this is omitted, the content type will be inferred from the name's
-   *     extension.
-   * @return {CB.File} the file object
+   * 通过url构建CBFile
+   * @param name
+   * @param url
+   * @param metaData
+   * @param type
+   * @return {File}
    */
   CB.File.withURL = function (name, url, metaData, type) {
-    if (!name || !url) {
-      throw new Error("Please provide file name and url");
-    }
+    if(!name || !url) throw new Error("Please provide file name and url");
     const file = new CB.File(name, null, type);
-    //copy metaData properties to file.
-    if (metaData) {
-      for (let prop in metaData) {
-        if (!file.attributes.metaData[prop]) file.attributes.metaData[prop] = metaData[prop];
+    if(metaData) {
+      for(let prop in metaData) {
+        if(!file.attributes.metaData[prop]) file.attributes.metaData[prop] = metaData[prop];
       }
     }
     file.attributes.url = url;
-    //Mark the file is from external source.
-    file.attributes.metaData.__source = 'external';
+    file.attributes.provider = 'external';
     return file;
   };
 
   CB.File.prototype = {
     className: '_File',
 
-    toJSON: function toJSON() {
-      const json = this._toFullJSON();
-      // add id and keep __type for backward compatible
-      if (_.has(this, 'id')) {
-        json.id = this.id;
-      }
-      return json;
+    /**
+     * 获取文件名
+     */
+    getName: function () {
+      return this.get('name');
     },
-    _toFullJSON: function _toFullJSON(seenObjects) {
-      const _this = this;
-
-      const json = _.clone(this.attributes);
-      AV._objectEach(json, function (val, key) {
-        json[key] = AV._encode(val, seenObjects);
-      });
-      AV._objectEach(this._operations, function (val, key) {
-        json[key] = val;
-      });
-
-      if (_.has(this, "id")) {
-        json.objectId = this.id;
+    /**
+     * 获取文件链接
+     */
+    getUrl: function () {
+      return this.get('url');
+    },
+    /**
+     * 获取尺寸
+     */
+    getSize: function () {
+      return this.metaData().size;
+    },
+    /**
+     * 获取文件所有者
+     * @return {owner|{id, displayName}|*}
+     */
+    getOwnerId: function () {
+      return this.metaData().owner;
+    },
+    /**
+     * 获取 metaData数据
+     * @param attr
+     * @return {*}
+     */
+    getMetaData: function (attr) {
+      return this.attributes.metaData[attr];
+    },
+    /**
+     * 设置 metaData数据
+     * @param attr
+     * @param value
+     */
+    setMetaData: function (attr, value) {
+      this.attributes.metaData[attr] = value;
+    },
+    /**
+     * 如果文件是图片，获取图片的缩略图URL。可以传入宽度、高度、质量、格式等参数。
+     * @param width
+     * @param height
+     * @param quality
+     * @param scaleToFit
+     * @param fmt
+     */
+    thumbnailURL: function (width, height, quality, scaleToFit, fmt) {
+      return '';
+    },
+    /**
+     * 获取数据
+     * @param attrName
+     * @return {*}
+     */
+    get: function (attrName) {
+      switch (attrName) {
+        case 'objectId':
+          return this.id;
+        case 'url':
+        case 'name':
+        case 'mimeType':
+        case 'metaData':
+        case 'createdAt':
+        case 'updatedAt':
+          return this.attributes[attrName];
+        default:
+          return this.attributes.metaData[attrName];
       }
-      _(['createdAt', 'updatedAt']).each(function (key) {
-        if (_.has(_this, key)) {
-          var val = _this[key];
-          json[key] = _.isDate(val) ? val.toJSON() : val;
+    },
+    /**
+     * 设置属性
+     */
+    set: function (key, value) {
+      switch (key) {
+        case 'name':
+        case 'url':
+        case 'mimeType':
+        case 'provider':
+        case 'metaData':
+          this.attributes[key] = value;
+          break;
+        default:
+          // File 并非一个 CBObject，不能完全自定义其他属性，所以只能都放在 metaData 上面
+          this.attributes.metaData[key] = value;
+          break;
+      }
+    },
+    /**
+     * 转化为json
+     * @return {string}
+     */
+    toJSON: function () {
+      return JSON.stringify(this.toOrigin());
+    },
+    /**
+     * 转化为原始数据
+     * @return {object}
+     */
+    toOrigin: function () {
+      return CB._decode(this);
+    },
+    /**
+     * 获取当前的引用对象(无完整数据）
+     */
+    getPointer: function () {
+      return {
+        __type: "File",
+        className: '_File',
+        objectId: this.id
+      };
+    },
+
+    /**
+     * 保存数据
+     * @return {*}
+     */
+    save: async function (client) {
+      if(this.id) throw new Error('File already saved. If you want to manipulate a file, use AV.Query to get it.');
+      if(this._data) {
+        const mimeType = this.get('mimeType');
+        let data = this._data;
+        if(data.base64) {
+          data = parseBase64(data.base64, mimeType);
         }
-      });
-      json.__type = "File";
-      return json;
+        if(data.blob) {
+          if(!data.blob.type && mimeType) {
+            data.blob.type = mimeType;
+          }
+          if(!data.blob.name) {
+            data.blob.name = this.get('name');
+          }
+          data = data.blob;
+        }
+        if(Buffer.isBuffer(data)) {
+          this.attributes.metaData.size = data.length;
+        }
+        this.id = shortId.generate();
+        const ossCloud = await CB._uploadBuffer(this.id, data);
+        this.set('url', ossCloud.url);
+        this.set('provider', 'oss');
+        const unsaved = this.toOrigin();
+        unsaved['objectId:override'] = unsaved.objectId;
+        delete unsaved.objectId;
+        await CB.crud.save('_File', unsaved, client);
+        if(!ossCloud.url) throw new Error('Upload successful, but unknown reason can not get url');
+        return this;
+      }else {
+        const cbCloud = await CB.crud.save('_File', this.toOrigin(), client);
+        this.id = cbCloud.objectId;
+        return this;
+      }
     },
-
-
   };
 
 };

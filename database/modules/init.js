@@ -1,6 +1,5 @@
 const CB = require('./cb');
 const _ = require('lodash');
-const co = require('co');
 const PG = require('pg');
 const OSS = require('ali-oss');
 
