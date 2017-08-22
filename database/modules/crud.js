@@ -178,11 +178,15 @@ module.exports = function (CB) {
           opts.limit = 1;
           break;
         case 'count':
-          selectClause = `count('objectId')`;
-          joinsSelectClause = '';
-          joinsRelationClause = '';
-          joinsGroupClause = '';
-          orderClause = '';
+          if(opts.includeCollection.length > 0) {
+            orderClause = '';
+          }else {
+            selectClause = `count('objectId')`;
+            joinsSelectClause = '';
+            joinsRelationClause = '';
+            joinsGroupClause = '';
+            orderClause = '';
+          }
           break;
       }
       //****************
@@ -224,7 +228,11 @@ module.exports = function (CB) {
             if(type === 'first') return rows[0] || null;
             return rows;
           case 'count':
-            return parseInt(result.rows[0].count);
+            if(opts.includeCollection.length > 0) {
+              return parseInt(result.rows.length);
+            }else {
+              return parseInt(result.rows[0].count);
+            }
         }
       }catch (error) {
         throw new Error('[DATABASE FIND ERROR] - ' + error.message);

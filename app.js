@@ -18,88 +18,43 @@ CB.initOSS({
   bucket          : 'erp-user-norm',
 });
 
-(async () => {
-  try {
-    const data = await CB.crud.find('Customer', 'find', {
-      conditionCollection: [
-        {
-          name: 'name',
-          key: 'name',
-          value: 'Code',
-          type: 'containsText'
-        }
-      ],
-      conditionJoins: 'name',
-      includeCollection: [
-        {
-          key: 'levels',
-          type: 'array',
-          className: 'CustomerLevel',
-        },
-        {
-          key: 'cate',
-          type: 'pointer',
-          className: 'CustomerCate',
-        },
-        {
-          key: 'avatar',
-          type: 'pointer',
-          className: '_File',
-        },
-        {
-          key: 'cate.company',
-          type: 'pointer',
-          className: 'Company',
-          conditionCollection: [
-            // {
-            //   name: 'name',
-            //   key: 'number',
-            //   value: 1,
-            //   type: 'equal'
-            // }
-          ],
-          orderCollection: [
-            {
-              key: 'number',
-              type: 'desc',
-            },
-          ]
-        },
-        {
-          key: 'cate.company.user',
-          type: 'pointer',
-          className: 'User',
-        },
-      ],
-      orderCollection: [
-        // {
-        //   key: 'objectId',
-        //   type: 'asc',
-        // },
-      ],
-    });
-    console.log(JSON.stringify(data));
-  }catch (error) {
-    console.log(error);
-  }
-})();
-
-(async () => {
-  try {
-    await CB.crud.save('CustomerCate', {
-      objectId: 'ryoknbP_Z',
-      number: 1
-    });
-    console.log('save success');
-  }catch (error) {
-    console.log(error);
-  }
-})();
 
 const Customer = CB.Object.extend('Customer');
 const CustomerCate = CB.Object.extend('CustomerCate');
 const CustomerLevel = CB.Object.extend('CustomerLevel');
 const Company = CB.Object.extend('Company');
+
+const innerInnerQuery = new CB.InnerQuery('Company');
+//innerInnerQuery.equalTo('name', '公司1');
+
+const innerQuery = new CB.InnerQuery('CustomerCate');
+innerQuery.equalTo('name', '供货商');
+innerQuery.ascending('number');
+
+const query = new CB.Query('Customer');
+query.matchesQuery('cate', innerQuery);
+//query.matchesQuery('cate.company', innerInnerQuery);
+query.count().then(function (data) {
+  console.log(JSON.stringify(data));
+}).catch(function (error) {
+  console.log(error);
+});
+
+
+
+// (async () => {
+//   try {
+//     await CB.crud.save('CustomerCate', {
+//       objectId: 'ryoknbP_Z',
+//       number: 1
+//     });
+//     console.log('save success');
+//   }catch (error) {
+//     console.log(error);
+//   }
+// })();
+
+
 
 
 
