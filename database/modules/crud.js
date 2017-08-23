@@ -20,6 +20,13 @@ const Condition = require('./crud_condition');
 
 module.exports = function (CB) {
   /**
+   * 合并嵌套的所有子对象
+   * @param row
+   */
+  const mergeChildren = (row) => {
+
+  };
+  /**
    * 数据库操作（数据库连接和关闭，请使用前自行实现）
    * @type {*}
    */
@@ -88,8 +95,8 @@ module.exports = function (CB) {
               ,CASE WHEN COUNT("${object.className}") = 0 THEN '[]' ELSE JSON_AGG("${object.className}") END AS "${object.key}"
             `;
             joinsRelationClause += `
-              LEFT JOIN LATERAL JSON_ARRAY_ELEMENTS("${_className}"."${object.key}") "${_className}${object.key}" ON true
-              LEFT JOIN "${object.className}" ON "${_className}${object.key}" ->> 'objectId' = "${object.className}"."objectId"
+              LEFT JOIN LATERAL JSON_ARRAY_ELEMENTS("${_className}"."${object.key.replace(/^\^/, '')}") "${_className}${object.key.replace(/^\^/, '')}" ON true
+              LEFT JOIN "${object.className}" ON "${_className}${object.key.replace(/^\^/, '')}" ->> 'objectId' = "${object.className}"."objectId"
             `;
           }else {
             if(isExistJointArray) {
@@ -214,6 +221,8 @@ module.exports = function (CB) {
           case 'find':
             const rows = result.rows;
             rows.forEach((row) => {
+              const rootItems = {};
+              //把连接过来的子类合并到其父根类属性中
               _.each(row, (value, key) => {
                 if(key.indexOf('.') > 0) {
                   const arr = key.split('.');
@@ -222,10 +231,17 @@ module.exports = function (CB) {
                   if(arr.length === 4 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]]) _.extend(row[arr[0]][arr[1]][arr[2]][arr[3]], value);
                   if(arr.length === 5 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]] && row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]]) _.extend(row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]], value);
                   delete row[key];
-                }else if(key.indexOf('^') === 0) {
-                  _.extend(row[key.substr(1)], value);
-                  delete row[key];
                 }
+                if(key.indexOf('^') === 0) rootItems[key] = value;
+              });
+              //把父根类合并到最外层对象中
+              _.each(rootItems, (value, key) => {
+                console.log(row[key]);
+                console.log(value);
+                // if(key.indexOf('^') === 0) {
+                //   _.extend(row[key.substr(1)], value);
+                //   delete row[key];
+                // }
               });
             });
             if(type === 'first') return rows[0] || null;

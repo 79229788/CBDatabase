@@ -26,8 +26,9 @@ const Company = CB.Object.extend('Company');
 
 
 const query = new CB.Query('Customer');
-query.include('cate', CustomerCate);
-query.include('cate.company', Company);
+query.includeArray('levels', CustomerLevel);
+//query.include('cate', CustomerCate);
+//query.include('cate.company', Company);
 query.first().then(function (data) {
   console.log(JSON.stringify(data));
 }).catch(function (error) {
