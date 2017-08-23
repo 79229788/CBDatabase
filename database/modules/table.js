@@ -72,6 +72,7 @@ module.exports = function (CB) {
         ${object.serial ? 'SERIAL' : ''}
         ${object.isPrimary ? 'PRIMARY KEY' : ''}
         ${object.isNotNull ? 'NOT NULL' : ''}
+        ${object.isUnique ? 'UNIQUE' : ''}
         ${defaultValue}
       `;
     },
