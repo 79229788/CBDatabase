@@ -2,7 +2,10 @@ const _ = require('lodash');
 const utils = require('./utils');
 const RESERVED_KEYS = ['objectId', 'createdAt', 'updatedAt'];
 const checkReservedKey = function checkReservedKey(key) {
-  if (RESERVED_KEYS.indexOf(key) !== -1) {
+  if(key.indexOf('^') > -1 || key.indexOf('.') > -1) {
+    throw new Error('[CBOBJECT ERROR] 字段命名中不允许使用.和^，请修改后重试！');
+  }
+  if(RESERVED_KEYS.indexOf(key) !== -1) {
     throw new Error('key[' + key + '] is reserved');
   }
 };
@@ -14,9 +17,10 @@ module.exports = function (CB) {
     if(attributes.constructor === this.constructor) attributes = attributes.toOrigin();
     this.parseDefaultDate(attributes);
     this.cid = _.uniqueId('c');
-    this.set(attributes);
+    this._serverData = (options || {}).serverData || false;
     this._hasData = true;
-    this._previousAttributes = _.cloneDeep(this.attributes);
+    this.set(attributes);
+    this._previousAttributes = this.toOrigin();
     this.init.apply(this, arguments);
   };
 
@@ -76,15 +80,16 @@ module.exports = function (CB) {
      */
     set: function set(key, value) {
       if(!key) return this;
-      if(key.indexOf('^') > -1 || key.indexOf('.') > -1) throw new Error('[CBOBJECT ERROR] 字段命名中不允许使用.和^，请修改后重试！');
       let attrs = this.attributes || {};
       if (_.isObject(key)) {
-        _.each(key, (value, key) => {
-          checkReservedKey(key);
+        const object = {};
+        _.each(key, (v, k) => {
+          if(!this._serverData) checkReservedKey(k);
+          object[k] = CB._encode(v, k);
         });
-        attrs = _.extend({}, this.attributes, key);
+        attrs = _.extend({}, this.attributes, object);
       } else {
-        checkReservedKey(key);
+        if(!this._serverData) checkReservedKey(key);
         attrs[key] = CB._encode(value, key);
       }
       if(attrs.objectId) {

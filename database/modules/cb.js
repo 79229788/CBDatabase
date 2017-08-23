@@ -100,13 +100,21 @@ CB._traverse = function (object, func) {
 CB._encode = function (object, key) {
   if(!_.isObject(object) || _.isDate(object)) return object;
   if(_.isArray(object)) {
-    return _.map(object, child => CB._encode(child));
+    return object.map(child => CB._encode(child));
   }
   if(object instanceof CB.Object) return object;
   if(object instanceof CB.File) return object;
   if(object.__type === 'Pointer') {
-    const pointer = CB.Object._create(object.className);
-    pointer._hasData = _.keys(object).length > 3;
+    let pointer;
+    if(_.size(object) > 3) {
+      pointer = new CB.Object(object, {serverData: true});
+      delete pointer.__type;
+      delete pointer.className;
+      pointer._hasData = true;
+    }else {
+      pointer = CB.Object._create(object.className);
+      pointer._hasData = false;
+    }
     return pointer;
   }
   // if(object.__type === 'Relation') {
@@ -116,7 +124,9 @@ CB._encode = function (object, key) {
   //   return relation;
   // }
   if(object.__type === 'File') {
-    return new CB.File(object.name);
+    const file = new CB.File(object.name);
+    file.set(object);
+    return file;
   }
   return _.mapValues(object, CB._encode);
 };

@@ -150,6 +150,11 @@ module.exports = function (CB) {
      * @param value
      */
     setMetaData: function (attr, value) {
+      if(_.isObject(attr) && !value) {
+        _.each(attr, (v, k) => {
+          this.setMetaData(k, v);
+        });
+      }
       this.attributes.metaData[attr] = value;
     },
     /**
@@ -187,17 +192,27 @@ module.exports = function (CB) {
      * 设置属性
      */
     set: function (key, value) {
+      if(_.isObject(key) && !value) {
+        _.each(key, (v, k) => {
+          this.set(k, v);
+        });
+      }
       switch (key) {
         case 'name':
         case 'url':
         case 'mimeType':
         case 'provider':
         case 'metaData':
+        case 'updatedAt':
+        case 'createdAt':
           this.attributes[key] = value;
+          break;
+        case 'objectId':
+          this.id = value;
           break;
         default:
           // File 并非一个 CBObject，不能完全自定义其他属性，所以只能都放在 metaData 上面
-          this.attributes.metaData[key] = value;
+          if(_.isString(key)) this.attributes.metaData[key] = value;
           break;
       }
     },

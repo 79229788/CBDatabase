@@ -24,7 +24,33 @@ module.exports = function (CB) {
    * @param row
    */
   const mergeChildren = (row) => {
-
+    const rootItems = {};
+    //把连接过来的子类合并到其父根类属性中
+    _.each(row, (value, key) => {
+      if(key.indexOf('.') > 0) {
+        const arr = key.split('.');
+        if(arr.length === 2 && row[arr[0]] && row[arr[0]][arr[1]]) merge(row[arr[0]][arr[1]], value);
+        if(arr.length === 3 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]]) merge(row[arr[0]][arr[1]][arr[2]], value);
+        if(arr.length === 4 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]]) merge(row[arr[0]][arr[1]][arr[2]][arr[3]], value);
+        if(arr.length === 5 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]] && row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]]) merge(row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]], value);
+        delete row[key];
+      }
+      if(key.indexOf('^') === 0) rootItems[key] = value;
+    });
+    //把父根类合并到最外层对象中
+    _.each(rootItems, (value, key) => {
+      if(key.indexOf('^') === 0) {
+        merge(row[key.substr(1)], value);
+        delete row[key];
+      }
+    });
+    //进行合并
+    function merge(oldItem, newItem) {
+      if(_.isArray(oldItem)) {
+        oldItem = oldItem.map((item, index) => _.extend(item, newItem[index]));
+      }
+      _.extend(oldItem, newItem);
+    }
   };
   /**
    * 数据库操作（数据库连接和关闭，请使用前自行实现）
@@ -221,28 +247,7 @@ module.exports = function (CB) {
           case 'find':
             const rows = result.rows;
             rows.forEach((row) => {
-              const rootItems = {};
-              //把连接过来的子类合并到其父根类属性中
-              _.each(row, (value, key) => {
-                if(key.indexOf('.') > 0) {
-                  const arr = key.split('.');
-                  if(arr.length === 2 && row[arr[0]] && row[arr[0]][arr[1]]) _.extend(row[arr[0]][arr[1]], value);
-                  if(arr.length === 3 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]]) _.extend(row[arr[0]][arr[1]][arr[2]], value);
-                  if(arr.length === 4 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]]) _.extend(row[arr[0]][arr[1]][arr[2]][arr[3]], value);
-                  if(arr.length === 5 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]] && row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]]) _.extend(row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]], value);
-                  delete row[key];
-                }
-                if(key.indexOf('^') === 0) rootItems[key] = value;
-              });
-              //把父根类合并到最外层对象中
-              _.each(rootItems, (value, key) => {
-                console.log(row[key]);
-                console.log(value);
-                // if(key.indexOf('^') === 0) {
-                //   _.extend(row[key.substr(1)], value);
-                //   delete row[key];
-                // }
-              });
+              mergeChildren(row);
             });
             if(type === 'first') return rows[0] || null;
             return rows;

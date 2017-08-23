@@ -46,10 +46,11 @@ module.exports = function (CB) {
      * @param objectClass
      */
     include: function (key, objectClass) {
+      const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
       this._queryOptions.includeCollection.push({
         key: '^' + key,
         type: 'single',
-        className: objectClass.prototype.className
+        className: className
       });
     },
     /**
@@ -59,10 +60,11 @@ module.exports = function (CB) {
      * @param objectClass
      */
     includeArray: function (key, objectClass) {
+      const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
       this._queryOptions.includeCollection.push({
         key: '^' + key,
         type: 'array',
-        className: objectClass.prototype.className
+        className: className
       });
     },
     /**
@@ -261,7 +263,10 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     find: async function (client) {
-      return await CB.crud.find(this.className, 'find', this._queryOptions, client);
+      const data = await CB.crud.find(this.className, 'find', this._queryOptions, client);
+      return data.map((item) => {
+        return new CB.Object(item, {serverData: true})
+      });
     },
     /**
      * 获取单条数据
@@ -269,7 +274,8 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     first: async function (client) {
-      return await CB.crud.find(this.className, 'first', this._queryOptions, client);
+      const data = await CB.crud.find(this.className, 'first', this._queryOptions, client);
+      return new CB.Object(data, {serverData: true});
     },
     /**
      * 获取数据数量

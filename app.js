@@ -27,10 +27,11 @@ const Company = CB.Object.extend('Company');
 
 const query = new CB.Query('Customer');
 query.includeArray('levels', CustomerLevel);
-//query.include('cate', CustomerCate);
-//query.include('cate.company', Company);
-query.first().then(function (data) {
-  console.log(JSON.stringify(data));
+query.include('cate', CustomerCate);
+query.include('cate.company', Company);
+query.include('avatar', '_File');
+query.get('r1lXMcF_-').then(function (data) {
+  console.log(data.get('levels'));
 }).catch(function (error) {
   console.log(error);
 });
