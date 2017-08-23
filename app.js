@@ -2,6 +2,7 @@ const _ = require('lodash');
 const CB = require('./database');
 const config_postgres = require('./config/postgres');
 const config_oss = require('./config/oss');
+const checkServerTable = require('./checkServerTable');
 
 CB.initPG({
   host     : config_postgres.postgres.host,
@@ -18,6 +19,8 @@ CB.initOSS({
   bucket          : 'erp-user-norm',
 });
 
+checkServerTable();
+
 
 const Customer = CB.Object.extend('Customer');
 const CustomerCate = CB.Object.extend('CustomerCate');
@@ -25,16 +28,16 @@ const CustomerLevel = CB.Object.extend('CustomerLevel');
 const Company = CB.Object.extend('Company');
 
 
-const query = new CB.Query('Customer');
-query.includeArray('levels', CustomerLevel);
-query.include('cate', CustomerCate);
-query.include('cate.company', Company);
-query.include('avatar', '_File');
-query.get('r1lXMcF_-').then(function (data) {
-  console.log(data.get('levels'));
-}).catch(function (error) {
-  console.log(error);
-});
+// const query = new CB.Query('Customer');
+// query.includeArray('levels', CustomerLevel);
+// query.include('cate', CustomerCate);
+// query.include('cate.company', Company);
+// query.include('avatar', '_File');
+// query.get('r1lXMcF_-').then(function (data) {
+//   console.log(data);
+// }).catch(function (error) {
+//   console.log(error);
+// });
 
 
 
