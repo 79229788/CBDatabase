@@ -152,6 +152,7 @@ module.exports = function (CB) {
     _toSaveOrigin: function () {
       const curr = this.toOrigin();
       const prev = this._previousAttributes;
+      //const currSimple =
       const saveObject = {};
       _.each(curr, (value, key) => {
         iteratee(value, key);
@@ -281,6 +282,7 @@ module.exports = function (CB) {
         }
       }
       if(!model.id || model.id && !(model instanceof CB.File) && model.isChanged()) {
+        console.log(model.toOrigin());
         const saved = await CB.crud.save(model.className, model.toOrigin(), client);
         model.id = saved.objectId;
       }
@@ -290,6 +292,7 @@ module.exports = function (CB) {
 
 
     }
+    throw new Error('error');
     return model;
   };
 
