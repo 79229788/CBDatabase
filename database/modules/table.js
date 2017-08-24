@@ -69,7 +69,6 @@ module.exports = function (CB) {
       return `
         "${object.name}"
         ${object.type}
-        ${object.serial ? 'SERIAL' : ''}
         ${object.isPrimary ? 'PRIMARY KEY' : ''}
         ${object.isNotNull ? 'NOT NULL' : ''}
         ${object.isUnique ? 'UNIQUE' : ''}
