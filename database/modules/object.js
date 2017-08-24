@@ -20,7 +20,7 @@ module.exports = function (CB) {
     this._serverData = (options || {}).serverData || false;
     this._hasData = true;
     this.set(attributes);
-    this._previousAttributes = _.clone(this.attributes);
+    this._previousAttributes = this.toOrigin();
     this.init.apply(this, arguments);
   };
 
@@ -53,11 +53,11 @@ module.exports = function (CB) {
       return this.get('updatedAt');
     },
     /**
-     * 是否已被修改(仅仅判断第一层，不会深层次判断)
+     * 是否已被修改
      * @return {boolean}
      */
     isChanged: function () {
-      return !_.isEqual(this.attributes, this._previousAttributes);
+      return !_.isEqual(this.toOrigin(), this._previousAttributes);
     },
     /**
      * 获取数据

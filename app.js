@@ -72,9 +72,8 @@ const Company = CB.Object.extend('Company');
   try {
     await client.query('BEGIN');
 
-    const cate = new CustomerCate();
     const customer = new Customer();
-    customer.set('cate', cate);
+
     console.log(customer.isChanged());
     //const res = await customer.save(client);
     //console.log(res);
