@@ -67,6 +67,28 @@ const Company = CB.Object.extend('Company');
 // });
 
 
+(async () => {
+  const client = await CB.pg.connect();
+  try {
+    await client.query('BEGIN');
+
+    const cate = new CustomerCate();
+    const customer = new Customer();
+    customer.set('cate', cate);
+    console.log(customer.isChanged());
+    //const res = await customer.save(client);
+    //console.log(res);
+
+    await client.query('COMMIT');
+  }catch (error) {
+    await client.query('ROLLBACK');
+    console.log(error);
+  }finally {
+    client.release();
+  }
+})().catch(e => console.log(e.message));
+
+
 // (async () => {
 //   const client = await CB.pg.connect();
 //   try {
@@ -98,6 +120,4 @@ const Company = CB.Object.extend('Company');
 //     client.release();
 //   }
 // })().catch(e => console.log(e.message));
-
-
 
