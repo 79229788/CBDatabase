@@ -109,20 +109,21 @@ CB._encode = function (object, key) {
     if(_.size(object) > 3) {
       pointer = new CB.Object(object, {serverData: true});
       delete pointer.__type;
-      delete pointer.className;
       pointer._hasData = true;
     }else {
       pointer = CB.Object._create(object.className);
+      pointer.id = object.objectId;
       pointer._hasData = false;
     }
     return pointer;
   }
-  // if(object.__type === 'Relation') {
-  //   if(!key) throw new Error('key missing decoding a Relation');
-  //   const relation = new CB.Relation(null, key);
-  //   relation.targetClassName = object.className;
-  //   return relation;
-  // }
+  if(object.__type === 'Relation') {
+    if(!key) throw new Error('key missing encoding a Relation');
+    const relation = new CB.Relation(null, key);
+    relation.className = object.className;
+    relation.relationId = object.relationId;
+    return relation;
+  }
   if(object.__type === 'File') {
     const file = new CB.File(object.name);
     file.set(object);
@@ -147,7 +148,7 @@ CB._decode = function (object) {
     if(object.id) origin.objectId = object.id;
     return CB._decode(origin);
   }
-  //if(object instanceof CB.Relation) return CB._decode(object);
+  if(object instanceof CB.Relation) return object.toOrigin();
   if(_.isObject(object)) {
     return _.mapValues(object, value => CB._decode(value));
   }

@@ -259,7 +259,18 @@ module.exports = function (CB) {
             }
         }
       }catch (error) {
-        throw new Error('[DATABASE FIND ERROR] - ' + error.message);
+        //*****表不存在时，直接返回空值
+        if(error.code === '42P01') {
+          switch (type) {
+            case 'first':
+              return null;
+            case 'find':
+              return [];
+            case 'count':
+              return 0;
+          }
+        }
+        throw new Error('[DATABASE FIND ERROR] - ' + error.code + error.message);
       }
     },
     /**

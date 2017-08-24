@@ -19,13 +19,14 @@ CB.initOSS({
   bucket          : 'erp-user-norm',
 });
 
-checkServerTable();
+//checkServerTable();
 
 
 const Customer = CB.Object.extend('Customer');
 const CustomerCate = CB.Object.extend('CustomerCate');
 const CustomerLevel = CB.Object.extend('CustomerLevel');
 const Company = CB.Object.extend('Company');
+const MiddleRole = CB.Object.extend('MiddleRole');
 
 
 // const query = new CB.Query('Customer');
@@ -72,11 +73,23 @@ const Company = CB.Object.extend('Company');
   try {
     await client.query('BEGIN');
 
-    const customer = new Customer();
+    const role1 = new MiddleRole();
+    role1.set('name', 'role1');
+    const role2 = new MiddleRole();
+    role2.set('name', 'role2');
+    const query = new CB.Query('Customer');
+    const customer = await query.get('001');
+    const relation = customer.relation('roles');
+    relation.save([role1, role2]);
+    // const relationQuery = relation.query();
+    // const res = await relationQuery.find();
+    //console.log(res);
 
-    console.log(customer.isChanged());
+    //console.log(customer.toOrigin());
+    console.log(customer._toSaveOrigin());
     //const res = await customer.save(client);
     //console.log(res);
+
 
     await client.query('COMMIT');
   }catch (error) {

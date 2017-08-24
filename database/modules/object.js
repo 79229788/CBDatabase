@@ -20,7 +20,9 @@ module.exports = function (CB) {
     this._serverData = (options || {}).serverData || false;
     this._hasData = true;
     this.set(attributes);
-    this._previousAttributes = this.toOrigin();
+    const previous = this.toOrigin();
+    delete previous.objectId;
+    this._previousAttributes = previous;
     this.init.apply(this, arguments);
   };
 
@@ -53,11 +55,13 @@ module.exports = function (CB) {
       return this.get('updatedAt');
     },
     /**
-     * 是否已被修改
+     * 是否已被修改（修改对象id不会触发更新）
      * @return {boolean}
      */
     isChanged: function () {
-      return !_.isEqual(this.toOrigin(), this._previousAttributes);
+      const current = this.toOrigin();
+      delete current.objectId;
+      return !_.isEqual(current, this._previousAttributes);
     },
     /**
      * 获取数据
@@ -100,6 +104,21 @@ module.exports = function (CB) {
       return this;
     },
     /**
+     * 获取关系表
+     * @param attr
+     * @return {*}
+     */
+    relation: function (attr) {
+      const value = this.get(attr);
+      if(value) {
+        if(!(value instanceof CB.Relation)) throw new Error("Called relation() on non-relation field " + attr);
+        value.parent = this;
+        return value;
+      } else {
+        return new CB.Relation(this, attr);
+      }
+    },
+    /**
      * 设置增量数据
      * @param key
      * @param value
@@ -125,6 +144,29 @@ module.exports = function (CB) {
      */
     toOrigin: function () {
       return CB._decode(this);
+    },
+    /**
+     * 转化为将要保存的原始数据（过滤掉未更新的属性）
+     * @return {object}
+     */
+    _toSaveOrigin: function () {
+      const curr = this.toOrigin();
+      const prev = this._previousAttributes;
+      const saveObject = {};
+      _.each(curr, (value, key) => {
+        iteratee(value, key);
+      });
+      function iteratee(value, key) {
+        if(_.isObject(value)) {
+          _.each(value, (value, key) => {
+            iteratee(value, key);
+          });
+        }
+        if(value !== prev[key]) {
+          saveObject[key] = value;
+        }
+      }
+      return saveObject;
     },
     /**
      * 获取当前的引用对象(无完整数据）
@@ -219,6 +261,7 @@ module.exports = function (CB) {
     //保存所有模型到服务器
     const savedModels = [];
     for(let model of unsavedModels) {
+      //***保存所有子类
       const children = model.getChildren();
       for(let key of Object.keys(children)) {
         const childs = children[key];
@@ -226,7 +269,7 @@ module.exports = function (CB) {
           //存在子类时，先保存全部子类
           const savedChilds = [];
           for(child of childs) {
-            if(!child.id || child.id && !(child instanceof CB.File) &&  child.isChanged()) {
+            if(!child.id || child.id && !(child instanceof CB.File) && child.isChanged()) {
               const saved = await CB.crud.save(child.className, child.toOrigin(), client);
               child.id = saved.objectId;
             }
@@ -236,12 +279,16 @@ module.exports = function (CB) {
           const pointers = savedChilds.map(model => model.getPointer());
           model.set(key, JSON.stringify(_.isArray(model.get(key)) ? pointers : pointers[0]));
         }
-        if(!model.id || model.id && !(model instanceof CB.File) && model.isChanged()) {
-          const saved = await CB.crud.save(model.className, model.toOrigin(), client);
-          model.id = saved.objectId;
-        }
+      }
+      if(!model.id || model.id && !(model instanceof CB.File) && model.isChanged()) {
+        const saved = await CB.crud.save(model.className, model.toOrigin(), client);
+        model.id = saved.objectId;
       }
       savedModels.push(model);
+      //***保存所有relation
+      const relations = model.get('__relations');
+
+
     }
     return model;
   };
@@ -308,24 +355,24 @@ module.exports = function (CB) {
     if(className === "User") className = "_User";
 
     let NewClassObject = null;
-    if (_.has(CB.Object._classMap, className)) {
+    if(_.has(CB.Object._classMap, className)) {
       const OldClassObject = CB.Object._classMap[className];
       // This new subclass has been told to extend both from "this" and from
       // OldClassObject. This is multiple inheritance, which isn't supported.
       // For now, let's just pick one.
-      if (protoProps || classProps) {
+      if(protoProps || classProps) {
         NewClassObject = OldClassObject._extend(protoProps, classProps);
-      } else {
+      }else {
         return OldClassObject;
       }
-    } else {
+    }else {
       protoProps = protoProps || {};
       protoProps._className = className;
       NewClassObject = this._extend(protoProps, classProps);
     }
     // Extending a subclass should reuse the classname automatically.
     NewClassObject.extend = function (arg0) {
-      if (_.isString(arg0) || arg0 && _.has(arg0, "className")) {
+      if(_.isString(arg0) || arg0 && _.has(arg0, "className")) {
         return CB.Object.extend.apply(NewClassObject, arguments);
       }
       const newArguments = [className].concat(_.toArray(arguments));
@@ -340,12 +387,11 @@ module.exports = function (CB) {
 
   // ES6 class syntax support
   Object.defineProperty(CB.Object.prototype, 'className', {
-    get: function get() {
+    get: function () {
+      //console.log(this.constructor);
       const className = this._className || this.constructor.name;
-      // If someone tries to subclass "User", coerce it to the right type.
-      if (className === "User") {
-        return "_User";
-      }
+      if(className === 'User') return '_User';
+      if(className === 'File') return '_File';
       return className;
     }
   });

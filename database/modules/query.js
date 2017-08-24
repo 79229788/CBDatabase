@@ -265,7 +265,9 @@ module.exports = function (CB) {
     find: async function (client) {
       const data = await CB.crud.find(this.className, 'find', this._queryOptions, client);
       return data.map((item) => {
-        return new CB.Object(item, {serverData: true})
+        const object = new CB.Object(item, {serverData: true});
+        object._className = this.className;
+        return object;
       });
     },
     /**
@@ -275,7 +277,9 @@ module.exports = function (CB) {
      */
     first: async function (client) {
       const data = await CB.crud.find(this.className, 'first', this._queryOptions, client);
-      return new CB.Object(data, {serverData: true});
+      const object = new CB.Object(data, {serverData: true});
+      object._className = this.className;
+      return object;
     },
     /**
      * 获取数据数量
