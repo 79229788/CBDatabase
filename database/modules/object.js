@@ -224,7 +224,6 @@ module.exports = function (CB) {
       return child;
     },
 
-
     /**
      * 保存数据
      * @return {*}
@@ -310,7 +309,6 @@ module.exports = function (CB) {
       if(!_.isArray(relations)) return;
 
     }
-    throw new Error('error');
     return model;
   };
 

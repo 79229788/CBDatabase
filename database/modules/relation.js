@@ -20,14 +20,10 @@ module.exports = function (CB) {
     },
     /**
      * 转化为原始对象
-     * @return {{__type: string, className: *, relationId: *}}
+     * @return {*}
      */
     toOrigin: function () {
-      return {
-        '__type': 'Relation',
-        'className': this.className,
-        'relationId': this.relationId,
-      };
+      return this.getPointer();
     },
     /**
      * 转化为引用指针

@@ -80,9 +80,6 @@ const MiddleRole = CB.Object.extend('MiddleRole');
     const query = new CB.Query('Customer');
     const customer = await query.get('001');
     customer.set('name', '爱宝贝2');
-    const cate = new CustomerCate();
-    cate.id = 'ssa';
-    customer.set('cate', cate);
 
     // const relation = customer.relation('roles');
     // relation.save([role1, role2]);
@@ -92,7 +89,7 @@ const MiddleRole = CB.Object.extend('MiddleRole');
 
     //console.log(customer.toOrigin());
     const res = await customer.save(client);
-    //console.log(res);
+    console.log(res);
 
 
     await client.query('COMMIT');
