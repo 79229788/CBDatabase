@@ -110,7 +110,7 @@ const MiddleRole = CB.Object.extend('MiddleRole');
     customer.set('name', '客户Code2');
     customer.set('levels', _.map(new Array(2), (value, index) => {
       const company = new Company();
-      company.id = 'Bkk_6OBea';
+      //company.id = 'Bkk_6OBea';
       const level = new CustomerLevel();
       level.set('name', '等级Code' + index);
       level.set('company', company);

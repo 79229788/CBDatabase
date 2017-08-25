@@ -104,6 +104,18 @@ module.exports = function (CB) {
       return this;
     },
     /**
+     * 设置增量数据
+     * @param key
+     * @param value
+     * @return {CB}
+     */
+    increment: function (key, value) {
+      if(!_.isInteger(value)) throw new Error('increment value must be number!');
+      delete this.attributes[key];
+      this.set(key + ':increment', parseInt(value));
+      return this;
+    },
+    /**
      * 获取关系表
      * @param attr
      * @return {*}
@@ -119,18 +131,12 @@ module.exports = function (CB) {
       }
     },
     /**
-     * 设置增量数据
-     * @param key
-     * @param value
-     * @return {CB}
+     * 克隆模型
+     * @return {*}
      */
-    increment: function (key, value) {
-      if(!_.isInteger(value)) throw new Error('increment value must be number!');
-      delete this.attributes[key];
-      this.set(key + ':increment', parseInt(value));
-      return this;
+    clone: function() {
+      return _.cloneDeep(this);
     },
-
     /**
      * 转化为json
      * @return {string}
@@ -262,8 +268,9 @@ module.exports = function (CB) {
     //保存所有模型到服务器
     const savedModels = [];
     for(let model of unsavedModels) {
-      //***保存所有子类
+      const tmpModel = model.clone(); //创建临时模型
       const children = model.getChildren();
+      //***保存所有子类
       for(let key of Object.keys(children)) {
         const childs = children[key];
         if(childs.length > 0) {
@@ -276,23 +283,21 @@ module.exports = function (CB) {
             }
             savedChilds.push(child);
           }
-          //然后在保存父类并储存其子类的pointer信息
+          //然后在保存tmpModel(临时模型)并储存其子类的pointer信息
           const pointers = savedChilds.map(model => model.getPointer());
-          model.set(key, JSON.stringify(_.isArray(model.get(key)) ? pointers : pointers[0]));
+          tmpModel.set(key, JSON.stringify(_.isArray(model.get(key)) ? pointers : pointers[0]));
         }
       }
       if(!model.id || model.id && !(model instanceof CB.File) && model.isChanged()) {
-        console.log(model.toOrigin());
-        const saved = await CB.crud.save(model.className, model.toOrigin(), client);
+        const saved = await CB.crud.save(model.className, tmpModel.toOrigin(), client);
         model.id = saved.objectId;
       }
-      savedModels.push(model);
+      savedModels.push(tmpModel);
       //***保存所有relation
       const relations = model.get('__relations');
 
 
     }
-    throw new Error('error');
     return model;
   };
 
