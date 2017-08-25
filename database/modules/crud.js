@@ -270,7 +270,7 @@ module.exports = function (CB) {
               return 0;
           }
         }
-        throw new Error('[DATABASE FIND ERROR] - ' + error.code + error.message);
+        throw new Error(`[DATABASE FIND ERROR] - ${className}: ${error.message}`);
       }
     },
     /**
@@ -287,13 +287,14 @@ module.exports = function (CB) {
       }
     },
     /**
-     * 创建数据
+     * 创建数据(不支持创建空数据)
      * @param className
      * @param object
      * @param client
      * @return {Promise}
      */
     create: async function (className, object, client) {
+      if(_.size(object) === 0) return;
       _.extend(object, {
         objectId: shortId.generate(),
         createdAt: new Date(),
@@ -318,7 +319,7 @@ module.exports = function (CB) {
         await _client.query(spl, params);
         return object;
       }catch (error) {
-        throw new Error('[DATABASE INSERT ERROR] - ' + error.message);
+        throw new Error(`[DATABASE INSERT ERROR] - ${className}: ${error.message}`);
       }finally {
         if(!client) _client.release();
       }
@@ -331,6 +332,7 @@ module.exports = function (CB) {
      * @return {Promise}
      */
     update: async function (className, object, client) {
+      if(_.size(object) === 0) return;
       _.extend(object, {
         updatedAt: new Date()
       });
@@ -356,7 +358,7 @@ module.exports = function (CB) {
         await _client.query(spl, params);
         return object;
       }catch (error) {
-        throw new Error('[DATABASE UPDATE ERROR] - ' + error.message);
+        throw new Error(`[DATABASE UPDATE ERROR] - ${className}: ${error.message}`);
       }finally {
         if(!client) _client.release();
       }
@@ -380,7 +382,7 @@ module.exports = function (CB) {
         await _client.query(spl);
         return 'ok';
       }catch (error) {
-        throw new Error('[DATABASE DELETE ERROR] - ' + error.message);
+        throw new Error(`[DATABASE DELETE ERROR] - ${className}: ${error.message}`);
       }finally {
         if(!client) _client.release();
       }

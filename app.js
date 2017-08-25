@@ -68,26 +68,64 @@ const MiddleRole = CB.Object.extend('MiddleRole');
 // });
 
 
+(async () => {
+  const client = await CB.pg.connect();
+  try {
+    await client.query('BEGIN');
+
+    const role1 = new MiddleRole();
+    role1.set('name', 'role1');
+    const role2 = new MiddleRole();
+    role2.set('name', 'role2');
+    const query = new CB.Query('Customer');
+    const customer = await query.get('001');
+    customer.set('name', '爱宝贝2');
+    const cate = new CustomerCate();
+    cate.id = 'ssa';
+    customer.set('cate', cate);
+
+    // const relation = customer.relation('roles');
+    // relation.save([role1, role2]);
+    // const relationQuery = relation.query();
+    // const res = await relationQuery.find();
+    //console.log(customer.get('cate').id);
+
+    //console.log(customer.toOrigin());
+    const res = await customer.save(client);
+    //console.log(res);
+
+
+    await client.query('COMMIT');
+  }catch (error) {
+    await client.query('ROLLBACK');
+    console.log(error);
+  }finally {
+    client.release();
+  }
+})().catch(e => console.log(e.message));
+
+
 // (async () => {
 //   const client = await CB.pg.connect();
 //   try {
 //     await client.query('BEGIN');
 //
-//     const role1 = new MiddleRole();
-//     role1.set('name', 'role1');
-//     const role2 = new MiddleRole();
-//     role2.set('name', 'role2');
-//     const query = new CB.Query('Customer');
-//     const customer = await query.get('001');
-//     const relation = customer.relation('roles');
-//     relation.save([role1, role2]);
-//     // const relationQuery = relation.query();
-//     // const res = await relationQuery.find();
-//     //console.log(res);
+//     const customer = new Customer();
+//     customer.set('name', '客户Code2');
+//     customer.set('levels', _.map(new Array(2), (value, index) => {
+//       const company = new Company();
+//       //company.id = 'Bkk_6OBea';
+//       const level = new CustomerLevel();
+//       level.set('name', '等级Code' + index);
+//       level.set('company', company);
+//       return level;
+//     }));
+//     // const data = { base64: '6K+077yM5L2g5Li65LuA5LmI6KaB56C06Kej5oiR77yf' };
+//     // const file = new CB.File('avatar', data);
+//     // await file.save(client);
+//     // customer.set('avatar', file);
 //
-//     //console.log(customer.toOrigin());
-//     console.log(customer._toSaveOrigin());
-//     //const res = await customer.save(client);
+//     const res = await customer.save(client);
 //     //console.log(res);
 //
 //
@@ -99,38 +137,4 @@ const MiddleRole = CB.Object.extend('MiddleRole');
 //     client.release();
 //   }
 // })().catch(e => console.log(e.message));
-
-
-(async () => {
-  const client = await CB.pg.connect();
-  try {
-    await client.query('BEGIN');
-
-    const customer = new Customer();
-    customer.set('name', '客户Code2');
-    customer.set('levels', _.map(new Array(2), (value, index) => {
-      const company = new Company();
-      //company.id = 'Bkk_6OBea';
-      const level = new CustomerLevel();
-      level.set('name', '等级Code' + index);
-      level.set('company', company);
-      return level;
-    }));
-    // const data = { base64: '6K+077yM5L2g5Li65LuA5LmI6KaB56C06Kej5oiR77yf' };
-    // const file = new CB.File('avatar', data);
-    // await file.save(client);
-    // customer.set('avatar', file);
-
-    const res = await customer.save(client);
-    console.log(res);
-
-
-    await client.query('COMMIT');
-  }catch (error) {
-    await client.query('ROLLBACK');
-    console.log(error);
-  }finally {
-    client.release();
-  }
-})().catch(e => console.log(e.message));
 

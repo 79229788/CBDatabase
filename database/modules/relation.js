@@ -30,6 +30,17 @@ module.exports = function (CB) {
       };
     },
     /**
+     * 转化为引用指针
+     * @return {{__type: string, className: *, relationId: *}}
+     */
+    getPointer: function () {
+      return {
+        '__type': 'Relation',
+        'className': this.className,
+        'relationId': this.relationId,
+      };
+    },
+    /**
      * 保存对象
      * @param objects
      */
