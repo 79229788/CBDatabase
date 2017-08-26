@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const shortId = require('shortid');
 const utils = require('./utils');
 const RESERVED_KEYS = ['objectId', 'createdAt', 'updatedAt'];
 const checkReservedKey = function checkReservedKey(key) {
@@ -117,14 +118,30 @@ module.exports = function (CB) {
       return this;
     },
     /**
+     * 设置关系属性
+     * @param key
+     * @param objectClass
+     * @param relationId
+     * @return {CB}
+     */
+    setRelation: function (key, objectClass, relationId) {
+      const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+      relationId  = relationId ? relationId : shortId.generate();
+      const relation = new CB.Relation(this, key);
+      relation.className = className;
+      relation.relationId = relationId;
+      this.set(key, relation);
+      return relation;
+    },
+    /**
      * 获取关系表
      * @param attr
      * @return {*}
      */
-    relation: function (attr) {
+    getRelation: function (attr) {
       const value = this.get(attr);
       if(value) {
-        if(!(value instanceof CB.Relation)) throw new Error("Called relation() on non-relation field " + attr);
+        if(!(value instanceof CB.Relation)) throw new Error("Called getRelation() on non-relation field " + attr);
         value.parent = this;
         return value;
       } else {
@@ -162,11 +179,8 @@ module.exports = function (CB) {
       const saveObject = {};
       for(let key of Object.keys(curr.attributes)) {
         const value = curr.attributes[key];
-        if(_.isArray(value) && (
-          value[0] instanceof CB.Object
-          || value[0] instanceof CB.File
-          || value instanceof CB.Relation)) {
-          if(!_.isEqual(value.map(item => item.getPointer()), prev.get(key).map(item => item.getPointer()))) {
+        if(_.isArray(value) && (value[0] instanceof CB.Object || value[0] instanceof CB.File)) {
+          if(!prev.get(key) || !_.isEqual(value.map(item => item.getPointer()), prev.get(key).map(item => item.getPointer()))) {
             const items = [];
             value.forEach((item) => {
               if(item.id) items.push(item.getPointer());
@@ -175,10 +189,14 @@ module.exports = function (CB) {
           }
           continue;
         }
-        if(value instanceof CB.Object
-          || value instanceof CB.File
-          || value instanceof CB.Relation) {
-          if(value.id && !_.isEqual(value.getPointer(), prev.get(key).getPointer())) {
+        if(value instanceof CB.Object || value instanceof CB.File) {
+          if(!prev.get(key) || value.id && !_.isEqual(value.getPointer(), prev.get(key).getPointer())) {
+            saveObject[key] = value.getPointer();
+          }
+          continue;
+        }
+        if(value instanceof CB.Relation) {
+          if(!prev.get(key) || value.relationId && value.className && !_.isEqual(value.getPointer(), prev.get(key).getPointer())) {
             saveObject[key] = value.getPointer();
           }
           continue;
@@ -285,8 +303,12 @@ module.exports = function (CB) {
           const savedChilds = [];
           for(child of childs) {
             if(!child.id || child.id && !(child instanceof CB.File)) {
-              const saved = await CB.crud.save(child.className, child._toSaveOrigin(), client);
+              const relations = child.get('__relations');
+              const saveObject = child._toSaveOrigin();
+              delete saveObject.__relations;
+              const saved = await CB.crud.save(child.className, saveObject, client);
               if(saved) child.id = saved.objectId;
+              await saveRelations(relations);
             }
             savedChilds.push(child);
           }
@@ -294,20 +316,33 @@ module.exports = function (CB) {
           model.set(key, _.isArray(model.get(key)) ? savedChilds : savedChilds[0]);
         }
       }
+      const relations = model.get('__relations');
       if(!model.id || model.id && !(model instanceof CB.File)) {
-        const saved = await CB.crud.save(model.className, model._toSaveOrigin(), client);
+        const saveObject = model._toSaveOrigin();
+        delete saveObject.__relations;
+        const saved = await CB.crud.save(model.className, saveObject, client);
         if(saved) model.id = saved.objectId;
       }
-      saveRelations(model);
+      await saveRelations(relations);
     }
-    const saved = await CB.crud.save(model.className, model._toSaveOrigin(), client);
+    const relations = model.get('__relations');
+    const saveObject = model._toSaveOrigin();
+    delete saveObject.__relations;
+    const saved = await CB.crud.save(model.className, saveObject, client);
     if(saved) model.id = saved.objectId;
-    saveRelations(model);
+    await saveRelations(relations);
     //***保存所有relation
-    function saveRelations(model) {
-      const relations = model.get('__relations');
+    async function saveRelations(relations) {
       if(!_.isArray(relations)) return;
-
+      for(let item of relations) {
+        await CB.table.createChildTable('public', item.parentClassName, item.className, [
+          {name: 'objectId', type: 'text', isPrimary: true},
+        ], client);
+        for(let model of item.data) {
+          model._className = item.className;
+          await CB.Object._deepSaveAsync(model, client);
+        }
+      }
     }
     return model;
   };

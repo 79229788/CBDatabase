@@ -82,7 +82,7 @@ CB._traverse = function (object, func) {
   }
   if(_.isObject(object)) {
     _.each(object, function (child, key) {
-      const newChild = CB._traverse(child, func);
+      const newChild = key === '__relations' ? child : CB._traverse(child, func);
       if (newChild) object[key] = newChild;
     });
     return func(object);
@@ -104,6 +104,7 @@ CB._encode = function (object, key) {
   }
   if(object instanceof CB.Object) return object;
   if(object instanceof CB.File) return object;
+  if(object instanceof CB.Relation) return object;
   if(object.__type === 'Pointer') {
     let pointer;
     if(_.size(object) > 3) {

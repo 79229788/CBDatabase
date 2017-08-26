@@ -47,8 +47,9 @@ module.exports = function (CB) {
           throw new Error(`[Relation error] All the elements of '${this.key}' must be instances of ${this.className}`);
         }
       }
-      const relations = this.parent.get('_relations') || [];
+      const relations = this.parent.get('__relations') || [];
       relations.push({
+        parentClassName: this.className,
         className: `${this.className}_${this.relationId}`,
         data: objects
       });

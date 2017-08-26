@@ -74,7 +74,7 @@ module.exports = function (CB) {
       mimeType: '',
     };
     if (_.isString(data)) {
-      throw new TypeError("Creating an AV.File from a String is not yet supported.");
+      throw new TypeError("Creating an CB.File from a String is not yet supported.");
     }
     if (_.isArray(data)) {
       this.attributes.metaData.size = data.length;
@@ -246,7 +246,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     save: async function (client) {
-      if(this.id) throw new Error('File already saved. If you want to manipulate a file, use AV.Query to get it.');
+      if(this.id) throw new Error('File already saved. If you want to manipulate a file, use CB.Query to get it.');
       if(this._data) {
         const mimeType = this.get('mimeType');
         let data = this._data;

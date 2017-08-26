@@ -270,7 +270,7 @@ module.exports = function (CB) {
               return 0;
           }
         }
-        throw new Error(`[DATABASE FIND ERROR] - ${className}: ${error.message}`);
+        throw new Error(`[DATABASE FIND ERROR] - ${className}: [${error.code}]${error.message}`);
       }
     },
     /**
@@ -281,7 +281,9 @@ module.exports = function (CB) {
      */
     save: async function (className, object, client) {
       if(object.objectId) {
-        return await this.update(className, object, client);
+        return await this.update(className, object, {
+          objectId: object.objectId
+        }, client);
       }else {
         return await this.create(className, object, client);
       }
@@ -319,7 +321,7 @@ module.exports = function (CB) {
         await _client.query(spl, params);
         return object;
       }catch (error) {
-        throw new Error(`[DATABASE INSERT ERROR] - ${className}: ${error.message}`);
+        throw new Error(`[DATABASE INSERT ERROR] - ${className}: [${error.code}]${error.message}`);
       }finally {
         if(!client) _client.release();
       }
@@ -328,20 +330,25 @@ module.exports = function (CB) {
      * 更新数据
      * @param className
      * @param object
+     * @param condition
      * @param client
      * @return {Promise}
      */
-    update: async function (className, object, client) {
+    update: async function (className, object, condition, client) {
       if(_.size(object) === 0) return;
       _.extend(object, {
         updatedAt: new Date()
+      });
+      const tmpObject = _.clone(object);
+      _.each(condition, (value, key) => {
+        delete tmpObject[key];
       });
       let index = 0;
       const spl = `
         UPDATE 
           "${className}" 
         SET
-          ${_.map(object, (value, key) => {
+          ${_.map(tmpObject, (value, key) => {
             index++;
             if(key.indexOf(':increment') > 0) {
               return `"${key.replace(':increment', '')}" = "${key.replace(':increment', '')}" ${value < 0 ? '-' : '+'} $${index}`;
@@ -349,16 +356,21 @@ module.exports = function (CB) {
             return `"${key}" = $${index}`;
           }).join(',')}
         WHERE
-          "objectId" = '${object.objectId}'
+          ${
+            _.map(condition, (value, key) => {
+              index++;
+              return `"${key}" = $${index}`;
+            }).join(',')
+          }
       `;
       printSql(spl, className, 'update');
-      const params = _.values(object);
+      const params = _.values(tmpObject).concat(_.values(condition));
       const _client = client || await CB.pg.connect();
       try {
         await _client.query(spl, params);
         return object;
       }catch (error) {
-        throw new Error(`[DATABASE UPDATE ERROR] - ${className}: ${error.message}`);
+        throw new Error(`[DATABASE UPDATE ERROR] - ${className}: [${error.code}]${error.message}`);
       }finally {
         if(!client) _client.release();
       }
@@ -366,23 +378,30 @@ module.exports = function (CB) {
     /**
      * 删除数据
      * @param className
-     * @param objectId
+     * @param condition
      * @param client
      */
-    delete: async function (className, objectId, client) {
+    delete: async function (className, condition, client) {
+      let index = 0;
       const spl = `
         DELETE FROM 
           "${className}" 
         WHERE 
-          "objectId" = '${objectId}'" 
+          ${
+            _.map(condition, (value, key) => {
+              index++;
+              return `"${key}" = $${index}`;
+            }).join(',')
+          } 
       `;
       printSql(spl, className, 'delete');
+      const params = _.values(condition);
       const _client = client || await CB.pg.connect();
       try {
-        await _client.query(spl);
+        await _client.query(spl, params);
         return 'ok';
       }catch (error) {
-        throw new Error(`[DATABASE DELETE ERROR] - ${className}: ${error.message}`);
+        throw new Error(`[DATABASE DELETE ERROR] - ${className}: [${error.code}]${error.message}`);
       }finally {
         if(!client) _client.release();
       }

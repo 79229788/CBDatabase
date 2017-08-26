@@ -76,6 +76,24 @@ module.exports = function (CB) {
       `;
     },
     /**
+     * 创建组
+     * @param tableSchema
+     * @param client
+     * @return {Promise.<string>}
+     */
+    createSchema: async function (tableSchema, client) {
+      const spl = `CREATE SCHEMA IF NOT EXISTS ${tableSchema}`;
+      const _client = client || await CB.pg.connect();
+      try {
+        await _client.query(spl);
+        return 'ok';
+      }catch (error) {
+        throw new Error('[DATABASE TABLE OPERATION ERROR] - ' + error.message);
+      }finally {
+        if(!client) _client.release();
+      }
+    },
+    /**
      * 创建表
      * @param tableSchema
      * @param tableName
@@ -85,7 +103,7 @@ module.exports = function (CB) {
      */
     createTable: async function (tableSchema, tableName, columns, client) {
       const spl = `
-        CREATE TABLE ${tableSchema}."${tableName}"
+        CREATE TABLE IF NOT EXISTS ${tableSchema}."${tableName}"
           (
             ${(columns || []).map((object) => {
               return this._generateColumnClause(object);
@@ -103,14 +121,33 @@ module.exports = function (CB) {
       }
     },
     /**
-     * 创建一个空表
+     * 创建一个子表
      * @param tableSchema
+     * @param parentTableName
      * @param tableName
+     * @param columns
      * @param client
      * @return {Promise.<*|Promise.<string>>}
      */
-    createEmptyTable: async function (tableSchema, tableName, client) {
-      return await this.createTable(tableSchema, tableName, null, client);
+    createChildTable: async function (tableSchema, parentTableName, tableName, columns, client) {
+      const spl = `
+        CREATE TABLE IF NOT EXISTS ${tableSchema}."${tableName}"
+          (
+            ${(columns || []).map((object) => {
+              return this._generateColumnClause(object);
+            }).join(', ')}
+          )
+        INHERITS ("${parentTableName}")
+      `;
+      const _client = client || await CB.pg.connect();
+      try {
+        await _client.query(spl);
+        return 'ok';
+      }catch (error) {
+        throw new Error('[DATABASE TABLE OPERATION ERROR] - ' + error.message);
+      }finally {
+        if(!client) _client.release();
+      }
     },
     /**
      * 创建列

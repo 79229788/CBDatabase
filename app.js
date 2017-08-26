@@ -34,8 +34,8 @@ const MiddleRole = CB.Object.extend('MiddleRole');
 // query.include('cate', CustomerCate);
 // query.include('cate.company', Company);
 // query.include('avatar', '_File');
-// query.get('r1lXMcF_-').then(function (data) {
-//   console.log(data);
+// query.find().then(function (data) {
+//   console.log(data[0].get('cate'));
 // }).catch(function (error) {
 //   console.log(error);
 // });
@@ -68,38 +68,37 @@ const MiddleRole = CB.Object.extend('MiddleRole');
 // });
 
 
-(async () => {
-  const client = await CB.pg.connect();
-  try {
-    await client.query('BEGIN');
-
-    const role1 = new MiddleRole();
-    role1.set('name', 'role1');
-    const role2 = new MiddleRole();
-    role2.set('name', 'role2');
-    const query = new CB.Query('Customer');
-    const customer = await query.get('001');
-    customer.set('name', '爱宝贝2');
-
-    // const relation = customer.relation('roles');
-    // relation.save([role1, role2]);
-    // const relationQuery = relation.query();
-    // const res = await relationQuery.find();
-    //console.log(customer.get('cate').id);
-
-    //console.log(customer.toOrigin());
-    const res = await customer.save(client);
-    console.log(res);
-
-
-    await client.query('COMMIT');
-  }catch (error) {
-    await client.query('ROLLBACK');
-    console.log(error);
-  }finally {
-    client.release();
-  }
-})().catch(e => console.log(e.message));
+// (async () => {
+//   const client = await CB.pg.connect();
+//   try {
+//     await client.query('BEGIN');
+//
+//     const role1 = new MiddleRole();
+//     role1.set('name', 'roleA');
+//     const role2 = new MiddleRole();
+//     role2.set('name', 'roleB');
+//     const customer = new Customer();
+//     customer.id = 'BJeGG6hadZ';
+//     customer.set('name', 'duyang');
+//     // const relation = customer.setRelation('roles', MiddleRole);
+//     // relation.save([role1, role2]);
+//     //const relationQuery = relation.query();
+//     //const res = await relationQuery.find();
+//     //console.log(customer.get('cate').id);
+//
+//     //console.log(customer.toOrigin());
+//     const res = await customer.save(client);
+//     console.log(res);
+//
+//
+//     await client.query('COMMIT');
+//   }catch (error) {
+//     await client.query('ROLLBACK');
+//     console.log(error);
+//   }finally {
+//     client.release();
+//   }
+// })().catch(e => console.log(e.message));
 
 
 // (async () => {
