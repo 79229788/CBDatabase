@@ -113,7 +113,6 @@ CB._encode = function (object, key) {
       pointer._hasData = true;
     }else {
       pointer = CB.Object._create(object.className);
-
       pointer.id = object.objectId;
       pointer._hasData = false;
     }

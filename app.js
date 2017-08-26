@@ -29,6 +29,44 @@ const Company = CB.Object.extend('Company');
 const MiddleRole = CB.Object.extend('MiddleRole');
 
 
+// const query = new CB.Query(CB.User);
+// query.get('H1gd860OW').then(function (data) {
+//   console.log(data);
+// }).catch(function (error) {
+//   console.log(error);
+// });
+
+const cookieSession = require('./database/modules/session')(CB);
+const http = require('http');
+http.createServer(function(req, res) {
+  if(req.url !== '/') return;
+  cookieSession({
+    secret: '9NiGJnPPvhmZZ4r85OMnqeNi',
+    maxAge: 1000 * 60 * 60 * 24,
+    fetchUser: true
+  })(req, res);
+
+  // const user = new CB.User();
+  // user.set('username', 'duyang');
+  // user.set('password', '123456');
+  // user.signUp().then(function (user) {
+  //   res.saveCurrentUser(user);
+  //   //console.log(user);
+  //
+  //   res.writeHead(200, {"Content-Type": "text/html"});
+  //   res.write("Hello World");
+  //   res.end();
+  // }).catch(function (error) {
+  //   console.log(error);
+  // });
+
+
+}).listen(8888);
+
+
+
+
+
 // const query = new CB.Query('Customer');
 // query.includeArray('levels', CustomerLevel);
 // query.include('cate', CustomerCate);
