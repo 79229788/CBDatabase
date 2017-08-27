@@ -248,7 +248,18 @@ module.exports = function (CB) {
      */
     save: async function (client) {
       return await CB.Object._deepSaveAsync(this, client);
-    }
+    },
+    /**
+     * 删除对象
+     * @param condition
+     * @param client
+     * @return {Promise.<CB>}
+     */
+    destroy: async function(condition, client) {
+      if(JSON.stringify(condition || {}) === '{}') condition.objectId = this.id;
+      await CB.curd.delete(this.className, condition, client);
+      return this;
+    },
 
   });
   /**
@@ -262,6 +273,19 @@ module.exports = function (CB) {
       savedModels.push(await CB.Object._deepSaveAsync(model, client));
     }
     return savedModels;
+  };
+  /**
+   * 批量删除对象
+   * @param list
+   * @param client
+   * @return {Promise.<Array>}
+   */
+  CB.Object.destroyAll = async function (list, client) {
+    const destroyedModels = [];
+    for(let model of list) {
+      destroyedModels.push(await model.destroy(null, client));
+    }
+    return destroyedModels;
   };
 
   /**
