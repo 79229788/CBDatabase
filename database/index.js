@@ -1,6 +1,7 @@
 const CB = require('./modules/cb');
 
 require('./modules/init');
+require('./modules/error');
 require('./modules/table')(CB);
 require('./modules/crud')(CB);
 require('./modules/session')(CB);

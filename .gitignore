@@ -1,5 +1,6 @@
-config/oss.js
 config/postgres.js
+config/oss.js
+config/redis.js
 
 ################################################
 # Node.js / NPM

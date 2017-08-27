@@ -1,5 +1,4 @@
 const _ = require('lodash');
-const onHeaders = require('on-headers');
 const Cookies = require('cookies');
 const Keygrip = require('keygrip');
 
@@ -55,67 +54,74 @@ module.exports = function(CB) {
     },
     /**
      * 生成一个sessionToken
-     * @param userId
+     * @param item1
+     * @param item2
      */
-    generateSessionToken: function (userId) {
-      const keys = new Keygrip([this.generateSignString(userId)]);
-      return keys.sign(userId);
+    generateSessionToken: function (item1, item2) {
+      const keys = new Keygrip([this.generateSignString(item1, item2 || this.getRandomString(16))]);
+      return keys.sign(item1);
     },
   };
   return function (options) {
     const opts = _.extend({
       name: 'sess',
       secret: 'secret',
-      httpOnly: true,
-      signed: true,
       maxAge: 0,
-      overwrite: true,
-      fetchUser: false,
     }, options || {});
     CB.session.options = opts;
-
     if(!opts.secret) {
       throw new Error(`'secret' option is not allowed to be empty.`);
     }
     return function (req, res, next) {
-      let responseUser = null;
-      const keys = new Keygrip([CB.session.generateSignString(opts.secret, req.url)]);
+      const keys = new Keygrip([opts.secret]);
       const cookies = new Cookies(req, res, {keys: keys});
+      let responseUser = null;
       //保存当前用户状态
       res.saveCurrentUser = function(user) {
         if (!user || !user.getSessionToken()) console.log('saveCurrentUser: User 对象上没有 sessionToken, 无法正确保存用户状态');
+        const session = {
+          _uid: user.id,
+          _sessionToken: user.getSessionToken()
+        };
         responseUser = user;
+        opts.signed = true;
+        opts.overwrite = true;
+        opts.httpOnly = true;
+        cookies.set(opts.name, CB.session.encode(session), opts);
+        req.currentUser = user;
+        req.sessionToken = user.getSessionToken();
       };
       //清理当前用户状态
       res.clearCurrentUser = function() {
         responseUser = null;
+        cookies.set(opts.name, '', opts);
+        delete req.currentUser;
+        delete req.sessionToken;
       };
-      onHeaders(res, () => {
-        if(responseUser) {
-          const session = {
-            _uid: responseUser.id,
-            _sessionToken: responseUser.getSessionToken()
-          };
-          cookies.set(opts.name, CB.session.encode(session), opts);
-        }else {
-          cookies.set(opts.name, '', opts);
-        }
-      });
+      if(responseUser) return next();
       //每次请求时验证session
-      let session = {};
-      const json = cookies.get(opts.name);
-      const sign = cookies.get(opts.name + '.sig');
-      if(json) session = CB.session.decode(json);
-      const uid = session._uid;
-      const sessionToken = session._sessionToken;
-      if(uid && sessionToken) {
-        CB.User.logInByIdAndSessionToken(uid, sessionToken, sign, opts.fetchUser).then(() => {
-          req.currentUser = user;
-          req.sessionToken = user.getSessionToken();
-          //return next();
+      let sessionObject = {};
+      const cookieSession = cookies.get(opts.name);
+      const cookieSign = cookies.get(opts.name + '.sig');
+      if(cookieSession) sessionObject = CB.session.decode(cookieSession);
+      const uid = sessionObject._uid;
+      const sessionToken = sessionObject._sessionToken;
+      if(uid && sessionToken && keys.verify(`${opts.name}=${cookieSession}`, cookieSign)) {
+        CB.sessionRedis.getTemporary(uid).then((data) => {
+          if(data === sessionToken) {
+            const user = new CB.User();
+            user.id = uid;
+            user._sessionToken = sessionToken;
+            req.currentUser = user;
+            req.sessionToken = user.getSessionToken();
+          }
+          next();
+        }).catch(() => {
+          next();
         });
+        CB.sessionRedis.quit();
       }else {
-        //return next();
+        next();
       }
     }
   }

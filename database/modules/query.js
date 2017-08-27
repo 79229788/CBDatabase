@@ -265,7 +265,10 @@ module.exports = function (CB) {
     find: async function (client) {
       const data = await CB.crud.find(this.className, 'find', this._queryOptions, client);
       return data.map((item) => {
-        if(this.className === '_User') return new CB.User(item, {serverData: true});
+        if(this.className === '_User') {
+          const user = new CB.User(item, {serverData: true});
+          return user._handleServeData(user);
+        }
         const object = new CB.Object(item, {serverData: true});
         object._className = this.className;
         return object;
@@ -278,7 +281,10 @@ module.exports = function (CB) {
      */
     first: async function (client) {
       const data = await CB.crud.find(this.className, 'first', this._queryOptions, client);
-      if(this.className === '_User') return new CB.User(data, {serverData: true});
+      if(this.className === '_User') {
+        const user = new CB.User(data, {serverData: true});
+        return user._handleServeData(user);
+      }
       const object = new CB.Object(data, {serverData: true});
       object._className = this.className;
       return object;

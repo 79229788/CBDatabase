@@ -2,6 +2,7 @@ const _ = require('lodash');
 const CB = require('./database');
 const config_postgres = require('./config/postgres');
 const config_oss = require('./config/oss');
+const config_redis = require('./config/redis');
 const checkServerTable = require('./checkServerTable');
 
 CB.initPG({
@@ -18,9 +19,13 @@ CB.initOSS({
   accessKeySecret : config_oss.oss.accessKeySecret,
   bucket          : 'erp-user-norm',
 });
+CB.initSessionRedis({
+  // host          : config_redis.redis.sessionRedis.host,
+  // port          : config_redis.redis.sessionRedis.port,
+  // password      : config_redis.redis.sessionRedis.password,
+});
 
 //checkServerTable();
-
 
 const Customer = CB.Object.extend('Customer');
 const CustomerCate = CB.Object.extend('CustomerCate');
@@ -36,6 +41,7 @@ const MiddleRole = CB.Object.extend('MiddleRole');
 //   console.log(error);
 // });
 
+
 const cookieSession = require('./database/modules/session')(CB);
 const http = require('http');
 http.createServer(function(req, res) {
@@ -43,18 +49,32 @@ http.createServer(function(req, res) {
   cookieSession({
     secret: '9NiGJnPPvhmZZ4r85OMnqeNi',
     maxAge: 1000 * 60 * 60 * 24,
-    fetchUser: true
-  })(req, res);
+  })(req, res, function () {
+    res.writeHead(200, {"Content-Type": "text/html"});
+    if(req.currentUser) {
+      res.write("read success id:" + req.currentUser.id);
+    }else {
+      res.write("read failure");
+    }
+    res.end();
+  });
 
-  // const user = new CB.User();
-  // user.set('username', 'duyang');
-  // user.set('password', '123456');
+  const user = new CB.User();
+  user.set('username', 'duyang');
+  user.set('password', '123456');
   // user.signUp().then(function (user) {
   //   res.saveCurrentUser(user);
-  //   //console.log(user);
-  //
   //   res.writeHead(200, {"Content-Type": "text/html"});
-  //   res.write("Hello World");
+  //   res.write("sign up success");
+  //   res.end();
+  // }).catch(function (error) {
+  //   console.log(error);
+  // });
+
+  // user.login().then(function (user) {
+  //   res.saveCurrentUser(user);
+  //   res.writeHead(200, {"Content-Type": "text/html"});
+  //   res.write("login success");
   //   res.end();
   // }).catch(function (error) {
   //   console.log(error);
