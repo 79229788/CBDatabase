@@ -72,15 +72,16 @@ CB.initSessionRedis = function (config) {
   delete _config.password;
   CB.sessionRedis = Redis.createClient(_config);
   //*****设置临时数据（有过期时间的数据）
-  CB.sessionRedis.setTemporary = function (key, value, expires) {
+  CB.sessionRedis.setTemporary = async function (key, value, expires) {
     if(!expires) throw new Error('Cannot setTemporary with an empty expires.');
     expires = new Date(Date.now() + expires);
     expires = expires.getTime();
-    CB.sessionRedis.set(key, `${expires}@_@${value}`);
+    await redisUtils.set(CB.sessionRedis, key, `${expires}@_@${value}`);
   };
   //*****获取临时数据
   CB.sessionRedis.getTemporary = async function (key) {
     const origin = await redisUtils.get(CB.sessionRedis, key);
+    if(!origin || origin.indexOf('@_@') < 0) return null;
     const expires = origin.split('@_@')[0];
     const value = origin.split('@_@')[1];
     if((new Date()).getTime() > expires) return null;

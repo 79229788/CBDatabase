@@ -116,28 +116,65 @@ module.exports = function (CB) {
       return await this._loginBase('email', 5003, queryBlock, client);
     },
     /**
-     * 通过sessionToken来登陆
-     * @param sessionToken
-     * @param queryBlock
-     * @param client
-     * @return {Promise.<void>}
+     * 退出登陆
      */
-    loginWithSessionToken: async function (sessionToken, queryBlock, client) {
-      if(!this.id) throw new Error('Cannot loginWithSessionToken with an empty id.');
-      const oldSessionToken = await CB.sessionRedis.getTemporary(this.id);
+    logOut: function () {
+      if(!this.id) throw new Error('Cannot logOut with an empty id.');
+      CB.sessionRedis.del(this.id);
       CB.sessionRedis.quit();
-      if(!oldSessionToken) throw new CBError(5000, CBError.code[5000]);
-      const query = new CB.Query(CB.User);
-      if(queryBlock) queryBlock(query);
-      const user = await query.get(this.id, client);
-      //刷新sessionToken
-      const sessionToken = CB.session.generateSessionToken(this.id);
-      CB.sessionRedis.setTemporary(user.id, sessionToken, CB.session.options.maxAge);
-      CB.sessionRedis.quit();
-      user._sessionToken = sessionToken;
-      return this._handleServeData(user);
     },
-    
+
   });
+  /**
+   * 使用会员名和密码登陆
+   * @param username
+   * @param password
+   * @param queryBlock
+   * @param client
+   * @return {Promise.<void>}
+   */
+  CB.User.login = async function (username, password, queryBlock, client) {
+    const user = new CB.User();
+    user.set('username', username);
+    user.set('password', password);
+    return await user.login(queryBlock, client);
+  };
+  /**
+   * 使用手机号和密码登陆
+   * @param mobilePhoneNumber
+   * @param password
+   * @param queryBlock
+   * @param client
+   * @return {Promise.<*|Promise.<void>>}
+   */
+  CB.User.logInWithMobilePhone = async function (mobilePhoneNumber, password, queryBlock, client) {
+    const user = new CB.User();
+    user.set('mobilePhoneNumber', mobilePhoneNumber);
+    user.set('password', password);
+    return await user.logInWithMobilePhone(queryBlock, client);
+  };
+  /**
+   * 使用邮箱和密码登陆
+   * @param email
+   * @param password
+   * @param queryBlock
+   * @param client
+   * @return {Promise.<*|Promise.<void>>}
+   */
+  CB.User.logInWithEmail = async function (email, password, queryBlock, client) {
+    const user = new CB.User();
+    user.set('email', email);
+    user.set('password', password);
+    return await user.logInWithEmail(queryBlock, client);
+  };
+  /**
+   * 退出登陆
+   * @param userId
+   */
+  CB.User.logOut = async function (userId) {
+    const user = new CB.User();
+    user.id = userId;
+    return user.logOut();
+  };
 
 };
