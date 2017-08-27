@@ -3,8 +3,8 @@ const _ = require('lodash');
 const PG = require('pg');
 const OSS = require('ali-oss');
 const Redis = require('redis');
-const ossUtils = require('./utils/oss');
-const redisUtils = require('./utils/redis');
+const ossUtils = require('../utils/oss');
+const redisUtils = require('../utils/redis');
 /**
  * 初始化默认数据库
  * @param config
@@ -19,9 +19,8 @@ CB.initPG = function (config) {
     printSql : false,
   }, config || {});
   CB.pg = new PG.Pool(CB.pgConfig);
-  CB.pg.on('error', (error, client) => {
-    console.error('Unexpected error on idle client', error);
-    process.exit(-1);
+  CB.pg.on('error', (error) => {
+    console.error('[PG]', error.message);
   });
 };
 
@@ -71,12 +70,15 @@ CB.initSessionRedis = function (config) {
   const _config = _.clone(CB.sessionRedisConfig);
   delete _config.password;
   CB.sessionRedis = Redis.createClient(_config);
+  CB.sessionRedis.on('error', (error) => {
+    console.error('[SessionRedis]', error.message);
+  });
   //*****设置临时数据（有过期时间的数据）
   CB.sessionRedis.setTemporary = async function (key, value, expires) {
     if(!expires) throw new Error('Cannot setTemporary with an empty expires.');
     expires = new Date(Date.now() + expires);
     expires = expires.getTime();
-    await redisUtils.set(CB.sessionRedis, key, `${expires}@_@${value}`);
+    return await redisUtils.set(CB.sessionRedis, key, `${expires}@_@${value}`);
   };
   //*****获取临时数据
   CB.sessionRedis.getTemporary = async function (key) {

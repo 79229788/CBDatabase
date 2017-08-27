@@ -22,7 +22,6 @@ module.exports = function (CB) {
     isAuthenticated: async function () {
       if(!this.id) return false;
       const sessionToken = await CB.sessionRedis.getTemporary(this.id);
-      CB.sessionRedis.quit();
       return !!sessionToken;
     },
     /**
@@ -39,7 +38,6 @@ module.exports = function (CB) {
       if(!this.id) throw new Error('Cannot refreshSessionToken with an empty id.');
       const sessionToken = CB.session.generateSessionToken(this.id);
       CB.sessionRedis.setTemporary(this.id, sessionToken, CB.session.options.maxAge);
-      CB.sessionRedis.quit();
       this._sessionToken = sessionToken;
     },
     /**
@@ -57,7 +55,6 @@ module.exports = function (CB) {
       //储存sessionToken
       const sessionToken = CB.session.generateSessionToken(username, password);
       CB.sessionRedis.setTemporary(user.id, sessionToken, CB.session.options.maxAge);
-      CB.sessionRedis.quit();
       this._sessionToken = sessionToken;
       return this._handleServeData(user);
     },
@@ -84,7 +81,6 @@ module.exports = function (CB) {
       //刷新sessionToken
       const sessionToken = CB.session.generateSessionToken(account, password);
       CB.sessionRedis.setTemporary(user.id, sessionToken, CB.session.options.maxAge);
-      CB.sessionRedis.quit();
       user._sessionToken = sessionToken;
       return this._handleServeData(user);
     },
@@ -121,7 +117,6 @@ module.exports = function (CB) {
     logOut: function () {
       if(!this.id) throw new Error('Cannot logOut with an empty id.');
       CB.sessionRedis.del(this.id);
-      CB.sessionRedis.quit();
     },
 
   });

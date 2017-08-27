@@ -1,3 +1,4 @@
+const co = require('co');
 module.exports = {
   /**
    * OSSBuffer上传

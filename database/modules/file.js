@@ -1,7 +1,6 @@
 const _ = require('lodash');
 const shortId = require('shortid');
-const co = require('co');
-const parseBase64 = require('./utils/parse-base64');
+const parseBase64 = require('../utils/parse-base64');
 
 module.exports = function (CB) {
   const hexOctet = function hexOctet() {
@@ -47,22 +46,6 @@ module.exports = function (CB) {
       chunks[i] = [b64Digit(b1 >> 2 & 0x3F), b64Digit(b1 << 4 & 0x30 | b2 >> 4 & 0x0F), has2 ? b64Digit(b2 << 2 & 0x3C | b3 >> 6 & 0x03) : "=", has3 ? b64Digit(b3 & 0x3F) : "="].join("");
     });
     return chunks.join("");
-  };
-  /**
-   * OSSBuffer上传（Promise包装）
-   * @param key
-   * @param value
-   * @return {Promise.<void>}
-   * @constructor
-   */
-  CB._uploadBuffer = async function (key, value) {
-    try {
-      return await co(function* () {
-        return yield CB.oss.put(key, value);
-      });
-    }catch(e) {
-      throw new Error('[OSS Buffer UPLOAD ERROR]' + error.message);
-    }
   };
 
   CB.File = function (name, data, mimeType) {
@@ -266,7 +249,7 @@ module.exports = function (CB) {
           this.attributes.metaData.size = data.length;
         }
         this.id = shortId.generate();
-        const ossCloud = await CB._uploadBuffer(this.id, data);
+        const ossCloud = await CB.oss.uploadBuffer(this.id, data);
         this.set('url', ossCloud.url);
         this.set('provider', 'oss');
         const unsaved = this.toOrigin();

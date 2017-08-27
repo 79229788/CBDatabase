@@ -119,7 +119,6 @@ module.exports = function(CB) {
         }).catch(() => {
           next();
         });
-        CB.sessionRedis.quit();
       }else {
         next();
       }

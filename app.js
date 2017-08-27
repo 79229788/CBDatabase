@@ -42,7 +42,7 @@ const MiddleRole = CB.Object.extend('MiddleRole');
 // });
 
 
-const cookieSession = require('./database/modules/session')(CB);
+const cookieSession = require('./database/middlewares/session')(CB);
 const http = require('http');
 http.createServer(function(req, res) {
   if(req.url !== '/') return;
@@ -50,13 +50,13 @@ http.createServer(function(req, res) {
     secret: '9NiGJnPPvhmZZ4r85OMnqeNi',
     maxAge: 1000 * 60 * 60 * 24,
   })(req, res, function () {
-    res.writeHead(200, {"Content-Type": "text/html"});
-    if(req.currentUser) {
-      res.write("read success id:" + req.currentUser.id);
-    }else {
-      res.write("read failure");
-    }
-    res.end();
+    // res.writeHead(200, {"Content-Type": "text/html"});
+    // if(req.currentUser) {
+    //   res.write("read success id:" + req.currentUser.id);
+    // }else {
+    //   res.write("read failure");
+    // }
+    // res.end();
   });
 
   const user = new CB.User();
@@ -71,14 +71,16 @@ http.createServer(function(req, res) {
   //   console.log(error);
   // });
 
-  // user.login().then(function (user) {
-  //   res.saveCurrentUser(user);
-  //   res.writeHead(200, {"Content-Type": "text/html"});
-  //   res.write("login success");
-  //   res.end();
-  // }).catch(function (error) {
-  //   console.log(error);
-  // });
+  user.login().then(function (user) {
+    res.saveCurrentUser(user);
+    res.writeHead(200, {"Content-Type": "text/html"});
+    res.write("login success");
+    res.end();
+  }).catch(function (error) {
+    res.writeHead(200, {"Content-Type": "text/html"});
+    res.write("login error");
+    res.end();
+  });
 
 
 }).listen(8888);

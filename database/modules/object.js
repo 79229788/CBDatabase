@@ -1,6 +1,6 @@
 const _ = require('lodash');
 const shortId = require('shortid');
-const utils = require('./utils');
+const utils = require('../utils');
 const RESERVED_KEYS = ['objectId', 'createdAt', 'updatedAt'];
 const checkReservedKey = function checkReservedKey(key) {
   if(key.indexOf('^') > -1 || key.indexOf('.') > -1) {
