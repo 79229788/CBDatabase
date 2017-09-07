@@ -13,13 +13,12 @@ const checkReservedKey = function checkReservedKey(key) {
 
 module.exports = function (CB) {
   CB.Object = function (attributes, options) {
-    if (_.isString(attributes)) return CB.Object._create.apply(this, arguments);
     attributes = attributes || {};
     if(attributes.constructor === this.constructor) attributes = attributes.toOrigin();
     this.parseDefaultDate(attributes);
     this.cid = _.uniqueId('c');
     this._serverData = (options || {}).serverData || false;
-    this._hasData = true;
+    this._hasData = (options || {}).hasData || true;
     this.set(attributes);
     const previous = this.toOrigin();
     delete previous.objectId;
@@ -98,11 +97,13 @@ module.exports = function (CB) {
         if(!this._serverData) checkReservedKey(key);
         attrs[key] = CB._encode(value, key);
       }
-      if(attrs.objectId) {
-        this.id = attrs.objectId;
-        delete attrs.objectId;
-      }
+      this.id = attrs.objectId || '';
+      this._className = attrs.className || '';
+      this._type = attrs.__type || '';
       this.attributes = attrs;
+      delete attrs.objectId;
+      delete attrs.className;
+      delete attrs.__type;
       return this;
     },
     /**
@@ -442,29 +443,6 @@ module.exports = function (CB) {
   //********************************其它
   //********************************
   //********************************
-  /**
-   * Returns the appropriate subclass for making new instances of the given
-   * className string.
-   * @private
-   */
-  CB.Object._getSubclass = function (className) {
-    if(!_.isString(className)) throw new Error('CB.Object._getSubclass requires a string argument.');
-    let ObjectClass = CB.Object._classMap[className];
-    if(!ObjectClass) {
-      ObjectClass = CB.Object.extend(className);
-      CB.Object._classMap[className] = ObjectClass;
-    }
-    return ObjectClass;
-  };
-
-  /**
-   * Creates an instance of a subclass of CB.Object for the given classname.
-   * @private
-   */
-  CB.Object._create = function (className, attributes, options) {
-    const ObjectClass = CB.Object._getSubclass(className);
-    return new ObjectClass(attributes, options);
-  };
 
   // Set up a map of className to class so that we can create new instances of
   // CB Objects from JSON automatically.
@@ -533,11 +511,7 @@ module.exports = function (CB) {
   // ES6 class syntax support
   Object.defineProperty(CB.Object.prototype, 'className', {
     get: function () {
-      //console.log(this.constructor);
-      const className = this._className || this.constructor.name;
-      if(className === 'User') return '_User';
-      if(className === 'File') return '_File';
-      return className;
+      return this._className;
     }
   });
 

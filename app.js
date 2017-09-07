@@ -3,14 +3,13 @@ const CB = require('./database');
 const config_postgres = require('./config/postgres');
 const config_oss = require('./config/oss');
 const config_redis = require('./config/redis');
-const checkServerTable = require('./checkServerTable');
 
 CB.initPG({
   host     : config_postgres.postgres.host,
   port     : config_postgres.postgres.port,
   user     : config_postgres.postgres.user,
   password : config_postgres.postgres.password,
-  database : 'ERP',
+  database : 'erp',
   printSql : true,
 });
 CB.initOSS({
@@ -20,71 +19,21 @@ CB.initOSS({
   bucket          : 'erp-user-norm',
 });
 CB.initSessionRedis({
-  // host          : config_redis.redis.sessionRedis.host,
-  // port          : config_redis.redis.sessionRedis.port,
-  // password      : config_redis.redis.sessionRedis.password,
+  host          : config_redis.redis.sessionRedis.host,
+  port          : config_redis.redis.sessionRedis.port,
+  password      : config_redis.redis.sessionRedis.password,
 });
 
-//checkServerTable();
-
-const Customer = CB.Object.extend('Customer');
-const CustomerCate = CB.Object.extend('CustomerCate');
-const CustomerLevel = CB.Object.extend('CustomerLevel');
+const Employee = CB.Object.extend('Employee');
 const Company = CB.Object.extend('Company');
-const MiddleRole = CB.Object.extend('MiddleRole');
 
-
-// const query = new CB.Query(CB.User);
-// query.get('H1gd860OW').then(function (data) {
-//   console.log(data);
-// }).catch(function (error) {
-//   console.log(error);
-// });
-
-
-const cookieSession = require('./database/middlewares/session')(CB);
-const http = require('http');
-http.createServer(function(req, res) {
-  if(req.url !== '/') return;
-  cookieSession({
-    secret: '9NiGJnPPvhmZZ4r85OMnqeNi',
-    maxAge: 1000 * 60 * 60 * 24,
-  })(req, res, function () {
-    // res.writeHead(200, {"Content-Type": "text/html"});
-    // if(req.currentUser) {
-    //   res.write("read success id:" + req.currentUser.id);
-    // }else {
-    //   res.write("read failure");
-    // }
-    // res.end();
-  });
-
-  const user = new CB.User();
-  user.set('username', 'duyang');
-  user.set('password', '123456');
-  // user.signUp().then(function (user) {
-  //   res.saveCurrentUser(user);
-  //   res.writeHead(200, {"Content-Type": "text/html"});
-  //   res.write("sign up success");
-  //   res.end();
-  // }).catch(function (error) {
-  //   console.log(error);
-  // });
-
-  user.login().then(function (user) {
-    res.saveCurrentUser(user);
-    res.writeHead(200, {"Content-Type": "text/html"});
-    res.write("login success");
-    res.end();
-  }).catch(function (error) {
-    res.writeHead(200, {"Content-Type": "text/html"});
-    res.write("login error");
-    res.end();
-  });
-
-
-}).listen(8888);
-
+const query = new CB.UserQuery(Employee);
+query.include('defaultCompany', Company);
+query.get('B1lG6qnsK-').then(function (data) {
+  console.log(data.toOrigin());
+}).catch(function (error) {
+  console.log(error);
+});
 
 
 

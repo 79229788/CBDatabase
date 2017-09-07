@@ -107,11 +107,8 @@ CB._encode = function (object, key) {
     let pointer;
     if(_.size(object) > 3) {
       pointer = new CB.Object(object, {serverData: true});
-      pointer._hasData = true;
     }else {
-      pointer = CB.Object._create(object.className);
-      pointer.id = object.objectId;
-      pointer._hasData = false;
+      pointer = new CB.Object({__type: object.__type, className: object.className, objectId: object.objectId}, {serverData: true, hasData: false});
     }
     return pointer;
   }
