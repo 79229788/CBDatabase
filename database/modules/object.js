@@ -402,7 +402,6 @@ module.exports = function (CB) {
     const relations = model.get('__relations');
     const saveObject = model._toSaveOrigin();
     delete saveObject.__relations;
-    console.log(saveObject);  //@@@@@@@@@@@@@@@@@@@@@@@@@@@
     const savedData = await CB.crud.save(model.className, saveObject, client);
     CB.Object._assignSavedData(savedData, model);
     await saveRelations(relations);
