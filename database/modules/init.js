@@ -5,6 +5,7 @@ const OSS = require('ali-oss');
 const Redis = require('redis');
 const ossUtils = require('../utils/oss');
 const redisUtils = require('../utils/redis');
+const checkTable = require('../hooks/checkTable');
 /**
  * 初始化默认数据库
  * @param config
@@ -17,11 +18,13 @@ CB.initPG = function (config) {
     password : '',
     database : 'web',
     printSql : false,
+    tableList: [],
   }, config || {});
   CB.pg = new PG.Pool(CB.pgConfig);
   CB.pg.on('error', (error) => {
     console.error('[PG]', error.message);
   });
+  checkTable(CB.pgConfig.tableList || []);
 };
 
 /**
@@ -41,7 +44,7 @@ CB.initOSS = function (config) {
   }
 };
 /**
- * 初始化网站静态资源OSS
+ * 初始化网站静态资源OSS(CDN源站)
  * @param config
  */
 CB.initStaticOSS = function (config) {

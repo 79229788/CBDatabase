@@ -99,9 +99,7 @@ CB._traverse = function (object, func) {
  */
 CB._encode = function (object, key) {
   if(!_.isObject(object) || _.isDate(object)) return object;
-  if(_.isArray(object)) {
-    return object.map(child => CB._encode(child));
-  }
+  if(_.isArray(object)) return object.map(child => CB._encode(child));
   if(object instanceof CB.Object) return object;
   if(object instanceof CB.File) return object;
   if(object instanceof CB.Relation) return object;
@@ -109,7 +107,6 @@ CB._encode = function (object, key) {
     let pointer;
     if(_.size(object) > 3) {
       pointer = new CB.Object(object, {serverData: true});
-      delete pointer.__type;
       pointer._hasData = true;
     }else {
       pointer = CB.Object._create(object.className);
@@ -145,8 +142,15 @@ CB._decode = function (object) {
     return _.map(object, child => CB._decode(child));
   }
   if(object instanceof CB.Object || object instanceof CB.File) {
-    const origin = _.cloneDeep(object.attributes);
-    if(object.id) origin.objectId = object.id;
+    const origin = _.extend(object.getPointer(), object.attributes);
+    if(object.id) {
+      origin.objectId = object.id;
+    }else {
+      delete origin.objectId;
+    }
+    //删除敏感字段（自定义字段请不要与其冲突，否则一并删除）
+    delete origin.password;
+    delete origin.authData;
     return CB._decode(origin);
   }
   if(object instanceof CB.Relation) return object.toOrigin();
@@ -155,7 +159,5 @@ CB._decode = function (object) {
   }
   return object;
 };
-
-
 
 module.exports = CB;

@@ -2,6 +2,7 @@ const CB = require('./modules/cb');
 
 require('./modules/init');
 require('./modules/error');
+require('./modules/cloud');
 require('./modules/file')(CB);
 require('./modules/relation')(CB);
 require('./modules/object')(CB);

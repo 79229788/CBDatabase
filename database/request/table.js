@@ -60,12 +60,18 @@ module.exports = function (CB) {
       let defaultValue = '';
       if(!_.isUndefined(object.default)) {
         defaultValue = 'DEFAULT ';
-        if(['json', 'jsonb'].indexOf(object.type) > -1) {
+        if(['json', 'jsonb', 'object'].indexOf(object.type) > -1) {
           defaultValue += JSON.stringify(object.default);
-        }else {
+        }else if(object.type.indexOf('[]') > 0) {
+          defaultValue += '{}';
+        } {
           defaultValue += object.default;
         }
       }
+      object.type = object.type.replace('pointer', 'jsonb');
+      object.type = object.type.replace('file', 'jsonb');
+      object.type = object.type.replace('relation', 'jsonb');
+      object.type = object.type.replace('object', 'jsonb');
       return `
         "${object.name}"
         ${object.type}

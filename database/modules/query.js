@@ -1,11 +1,32 @@
 const _ = require('lodash');
 
 module.exports = function (CB) {
+  /**
+   * 通用查询
+   * @param objectClass
+   * @constructor
+   */
   CB.Query = function (objectClass) {
-    if(_.isString(objectClass)) objectClass = CB.Object._getSubclass(objectClass);
-    this.objectClass = objectClass;
-    this.className = objectClass.prototype.className;
-
+    this.className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+    this._queryOptions = {
+      selectCollection: [],
+      includeCollection: [],
+      conditionCollection: [],
+      conditionJoins: '',
+      orderCollection: [],
+      skip: 0,
+      limit: 1000,
+    };
+  };
+  /**
+   * 用户查询
+   * @param childClass
+   * @constructor
+   */
+  CB.UserQuery = function (childClass) {
+    this.className = '_User';
+    this.isUserQuery = true;
+    if(childClass) this.className = _.isString(childClass) ? childClass : childClass.prototype.className;
     this._queryOptions = {
       selectCollection: [],
       includeCollection: [],
@@ -19,11 +40,13 @@ module.exports = function (CB) {
 
   CB.Query._extend = CB._extend;
 
+  /**
+   * 内建查询
+   * @param objectClass
+   * @constructor
+   */
   CB.InnerQuery = function (objectClass) {
-    if(_.isString(objectClass)) objectClass = CB.Object._getSubclass(objectClass);
-    this.objectClass = objectClass;
-    this.className = objectClass.prototype.className;
-
+    this.className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
     this._queryOptions = {
       conditionCollection: [],
       conditionJoins: '',
@@ -46,6 +69,7 @@ module.exports = function (CB) {
      * @param objectClass
      */
     include: function (key, objectClass) {
+      if(!objectClass) throw new Error('调用CB.Query的include方法，必须设置第二个参数(objectClass)');
       const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
       this._queryOptions.includeCollection.push({
         key: '^' + key,
@@ -58,14 +82,26 @@ module.exports = function (CB) {
      * @param key 查询字段（支持5层嵌套，嵌套连接请使用"."）
      * 例如：product.cate.levels，该类型只能作为最后一层出现
      * @param objectClass
+     * @param orderKey 字段
+     * @param orderBy 字段
      */
-    includeArray: function (key, objectClass) {
+    includeArray: function (key, objectClass, orderKey = 'createdAt', orderBy = 'asc') {
+      if(!objectClass) throw new Error('[CB.Query] include方法，必须设置第二个参数(objectClass)');
       const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
       this._queryOptions.includeCollection.push({
         key: '^' + key,
         type: 'array',
-        className: className
+        className: className,
+        orderKey: orderKey,
+        orderBy: orderBy
       });
+    },
+    /**
+     * 内嵌查询文件
+     * @param key
+     */
+    includeFile: function (key) {
+      this.include(key, '_File');
     },
     /**
      * 内嵌查询[高级版：同简易版，并额外支持条件查询和指定排序]
@@ -75,7 +111,7 @@ module.exports = function (CB) {
      */
     matchesQuery: function (key, object) {
       _.remove(this._queryOptions.includeCollection, item => item.key === key);
-      if(!(object instanceof CB.InnerQuery)) throw new Error('[CB QUERY ERROR] matchesQuery 必须使用CB.InnerQuery构建');
+      if(!(object instanceof CB.InnerQuery)) throw new Error('[CB.Query] matchesQuery方法，查询对象必须使用CB.InnerQuery构建');
       this._queryOptions.includeCollection.push({
         key: '^' + key,
         type: 'single',
@@ -95,11 +131,10 @@ module.exports = function (CB) {
         type: type
       });
     },
-    _jsonCondition: function (key, value, jsonKey, jsonValue, name, type) {
+    _jsonCondition: function (key, jsonKey, jsonValue, name, type) {
       this._queryOptions.conditionCollection.push({
         name: name || '',
         key: key,
-        value: value,
         jsonKey: jsonKey,
         jsonValue: jsonValue,
         type: type
@@ -107,6 +142,7 @@ module.exports = function (CB) {
     },
     //*****基本类型判断
     equalTo: function (key, value, name) {
+      if(value instanceof CB.Object) return this._jsonCondition(key, 'objectId', value.id, name, 'equalInJson');
       this._baseCondition(key, value, name, 'equal');
     },
     notEqualTo: function (key, value, name) {
@@ -153,23 +189,23 @@ module.exports = function (CB) {
       this._baseCondition(key, value, name, 'overlapInArray');
     },
     //*****JSON类型判断
-    equalInJson: function (key, value, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, value, jsonKey, jsonValue, name, 'equalInJson');
+    equalInJson: function (key, jsonKey, jsonValue, name) {
+      this._jsonCondition(key, jsonKey, jsonValue, name, 'equalInJson');
     },
-    notEqualInJson: function (key, value, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, value, jsonKey, jsonValue, name, 'notEqualInJson');
+    notEqualInJson: function (key, jsonKey, jsonValue, name) {
+      this._jsonCondition(key, jsonKey, jsonValue, name, 'notEqualInJson');
     },
-    greaterThanInJson: function (key, value, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, value, jsonKey, jsonValue, name, 'greaterThanInJson');
+    greaterThanInJson: function (key, jsonKey, jsonValue, name) {
+      this._jsonCondition(key, jsonKey, jsonValue, name, 'greaterThanInJson');
     },
-    greaterThanOrEqualInJson: function (key, value, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, value, jsonKey, jsonValue, name, 'greaterThanOrEqualInJson');
+    greaterThanOrEqualInJson: function (key, jsonKey, jsonValue, name) {
+      this._jsonCondition(key, jsonKey, jsonValue, name, 'greaterThanOrEqualInJson');
     },
-    lessThanInJson: function (key, value, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, value, jsonKey, jsonValue, name, 'lessThanInJson');
+    lessThanInJson: function (key, jsonKey, jsonValue, name) {
+      this._jsonCondition(key, jsonKey, jsonValue, name, 'lessThanInJson');
     },
-    lessThanOrEqualInJson: function (key, value, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, value, jsonKey, jsonValue, name, 'lessThanOrEqualInJson');
+    lessThanOrEqualInJson: function (key, jsonKey, jsonValue, name) {
+      this._jsonCondition(key, jsonKey, jsonValue, name, 'lessThanOrEqualInJson');
     },
     existKeyInJson: function (key, value, name) {
       this._baseCondition(key, value, name, 'existKeyInJson');
@@ -264,10 +300,12 @@ module.exports = function (CB) {
      */
     find: async function (client) {
       const data = await CB.crud.find(this.className, 'find', this._queryOptions, client);
+      if(data.length === 0) return [];
       return data.map((item) => {
-        if(this.className === '_User') {
+        if(this.isUserQuery) {
           const user = new CB.User(item, {serverData: true});
-          return user._handleServeData(user);
+          user.setChildClass(this.className);
+          return user;
         }
         const object = new CB.Object(item, {serverData: true});
         object._className = this.className;
@@ -281,9 +319,11 @@ module.exports = function (CB) {
      */
     first: async function (client) {
       const data = await CB.crud.find(this.className, 'first', this._queryOptions, client);
-      if(this.className === '_User') {
+      if(!data) return null;
+      if(this.isUserQuery) {
         const user = new CB.User(data, {serverData: true});
-        return user._handleServeData(user);
+        user.setChildClass(this.className);
+        return user;
       }
       const object = new CB.Object(data, {serverData: true});
       object._className = this.className;
@@ -299,6 +339,7 @@ module.exports = function (CB) {
     }
   };
 
-  CB.InnerQuery.prototype = CB.Query.prototype;
+  CB.InnerQuery.prototype = _.clone(CB.Query.prototype);
+  CB.UserQuery.prototype = _.clone(CB.Query.prototype);
 
 };

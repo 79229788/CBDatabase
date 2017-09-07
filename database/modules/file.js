@@ -1,19 +1,11 @@
 const _ = require('lodash');
 const shortId = require('shortid');
+const fileType = require('file-type');
 const parseBase64 = require('../utils/parse-base64');
 
 module.exports = function (CB) {
-  const hexOctet = function hexOctet() {
-    return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-  };
 
-  // port from browserify path module
-  // since react-native packager won't shim node modules.
-  const extname = function extname(path) {
-    return path.match(/^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/)[4];
-  };
-
-  const b64Digit = function b64Digit(number) {
+  const b64Digit = function (number) {
     if (number < 26) {
       return String.fromCharCode(65 + number);
     }
@@ -32,7 +24,7 @@ module.exports = function (CB) {
     throw new Error('Tried to encode large digit ' + number + ' in base64.');
   };
 
-  const encodeBase64 = function encodeBase64(array) {
+  const encodeBase64 = function (array) {
     const chunks = [];
     chunks.length = Math.ceil(array.length / 3);
     _.times(chunks.length, function (i) {
@@ -48,7 +40,7 @@ module.exports = function (CB) {
     return chunks.join("");
   };
 
-  CB.File = function (name, data, mimeType) {
+  CB.File = function (name, data) {
     this.attributes = {
       name: name,
       url: '',
@@ -56,31 +48,30 @@ module.exports = function (CB) {
       provider: '',
       mimeType: '',
     };
-    if (_.isString(data)) {
+    if(_.isString(data)) {
       throw new TypeError("Creating an CB.File from a String is not yet supported.");
     }
-    if (_.isArray(data)) {
+    if(_.isArray(data)) {
       this.attributes.metaData.size = data.length;
       data = { base64: encodeBase64(data) };
     }
-    this._extName = '';
     this._data = data;
+    this._extName = '';
     let owner = null;
     if (data && data.owner) owner = data.owner;
     this.attributes.metaData.owner = owner ? owner.id : 'unknown';
-    if(mimeType) this.set('mimeType', mimeType);
   };
   /**
    * 通过url构建CBFile
    * @param name
    * @param url
    * @param metaData
-   * @param type
+   * @param mimeType
    * @return {File}
    */
-  CB.File.withURL = function (name, url, metaData, type) {
+  CB.File.withURL = function (name, url, metaData, mimeType) {
     if(!name || !url) throw new Error("Please provide file name and url");
-    const file = new CB.File(name, null, type);
+    const file = new CB.File(name, null, mimeType);
     if(metaData) {
       for(let prop in metaData) {
         if(!file.attributes.metaData[prop]) file.attributes.metaData[prop] = metaData[prop];
@@ -223,6 +214,13 @@ module.exports = function (CB) {
         objectId: this.id
       };
     },
+    /**
+     *
+     * @private
+     */
+    _toSaveOrigin: function () {
+
+    },
 
     /**
      * 保存数据
@@ -231,29 +229,26 @@ module.exports = function (CB) {
     save: async function (client) {
       if(this.id) throw new Error('File already saved. If you want to manipulate a file, use CB.Query to get it.');
       if(this._data) {
-        const mimeType = this.get('mimeType');
         let data = this._data;
         if(data.base64) {
-          data = parseBase64(data.base64, mimeType);
-        }
-        if(data.blob) {
-          if(!data.blob.type && mimeType) {
-            data.blob.type = mimeType;
-          }
-          if(!data.blob.name) {
-            data.blob.name = this.get('name');
-          }
-          data = data.blob;
+          data = parseBase64(data.base64);
         }
         if(Buffer.isBuffer(data)) {
           this.attributes.metaData.size = data.length;
         }
+        const typeInfo = fileType(data);
+        if(_.isObject(typeInfo) && typeInfo.mime) {
+          this._extName = '.' + typeInfo.ext;
+          this.set('mimeType', typeInfo.mime);
+        }
         this.id = shortId.generate();
-        const ossCloud = await CB.oss.uploadBuffer(this.id, data);
+        const ossCloud = await CB.oss.uploadBuffer(`${this.id}${this._extName}`, data);
         this.set('url', ossCloud.url);
         this.set('provider', 'oss');
         const unsaved = this.toOrigin();
         unsaved['objectId:override'] = unsaved.objectId;
+        delete unsaved.__type;
+        delete unsaved.className;
         delete unsaved.objectId;
         await CB.crud.save('_File', unsaved, client);
         if(!ossCloud.url) throw new Error('Upload successful, but unknown reason can not get url');

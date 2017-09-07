@@ -112,9 +112,58 @@ module.exports = function (CB) {
      * @return {CB}
      */
     increment: function (key, value) {
-      if(!_.isInteger(value)) throw new Error('increment value must be number!');
+      if(!key) return this;
+      if(!_.isNumber(value)) throw new Error('increment value must be number!');
       delete this.attributes[key];
-      this.set(key + ':increment', parseInt(value));
+      this.set(key + ':[action]increment', value);
+      return this;
+    },
+    /**
+     * 给数组属性添加元素(在后面追加)
+     * @param key
+     * @param value
+     * @return {CB}
+     */
+    append: function (key, value) {
+      if(!key) return this;
+      delete this.attributes[key];
+      this.set(key + ':[action]append', value);
+      return this;
+    },
+    /**
+     * 给数组属性添加元素(在前面插入)
+     * @param key
+     * @param value
+     * @return {CB}
+     */
+    prepend: function (key, value) {
+      if(!key) return this;
+      delete this.attributes[key];
+      this.set(key + ':[action]prepend', value);
+      return this;
+    },
+    /**
+     * 给数组属性连接一个新数组
+     * @param key
+     * @param array
+     * @return {CB}
+     */
+    concat: function (key, array) {
+      if(!key) return this;
+      delete this.attributes[key];
+      this.set(key + ':[action]concat', array);
+      return this;
+    },
+    /**
+     * 给数组属性移除元素
+     * @param key
+     * @param value
+     * @return {CB}
+     */
+    remove: function (key, value) {
+      if(!key) return this;
+      delete this.attributes[key];
+      this.set(key + ':[action]remove', value);
       return this;
     },
     /**
@@ -242,6 +291,7 @@ module.exports = function (CB) {
       return child;
     },
 
+
     /**
      * 保存数据
      * @return {*}
@@ -251,13 +301,13 @@ module.exports = function (CB) {
     },
     /**
      * 删除对象
-     * @param condition
      * @param client
      * @return {Promise.<CB>}
      */
-    destroy: async function(condition, client) {
-      if(JSON.stringify(condition || {}) === '{}') condition.objectId = this.id;
-      await CB.curd.delete(this.className, condition, client);
+    destroy: async function(client) {
+      await CB.crud.delete(this.className, {
+        objectId: this.id
+      }, client);
       return this;
     },
 
@@ -269,8 +319,8 @@ module.exports = function (CB) {
    */
   CB.Object.saveAll = async function (list, client) {
     const savedModels = [];
-    for(let model of list) {
-      savedModels.push(await CB.Object._deepSaveAsync(model, client));
+    for(let model of _.flattenDeep(list)) {
+      if(model) savedModels.push(await CB.Object._deepSaveAsync(model, client));
     }
     return savedModels;
   };
@@ -282,8 +332,8 @@ module.exports = function (CB) {
    */
   CB.Object.destroyAll = async function (list, client) {
     const destroyedModels = [];
-    for(let model of list) {
-      destroyedModels.push(await model.destroy(null, client));
+    for(let model of _.flattenDeep(list)) {
+      if(model) destroyedModels.push(await model.destroy(null, client));
     }
     return destroyedModels;
   };
@@ -298,7 +348,7 @@ module.exports = function (CB) {
     children = children || [];
     files = files || [];
     CB._traverse(model.attributes, (value) => {
-      if (value instanceof CB.Object) {
+      if(value instanceof CB.Object) {
         if(value.isChanged()) children.push(value);
       }else if(value instanceof CB.File) {
         if(!value.getUrl() && !value.id) files.push(value);
@@ -329,8 +379,8 @@ module.exports = function (CB) {
               const relations = child.get('__relations');
               const saveObject = child._toSaveOrigin();
               delete saveObject.__relations;
-              const saved = await CB.crud.save(child.className, saveObject, client);
-              if(saved) child.id = saved.objectId;
+              const savedData = await CB.crud.save(child.className, saveObject, client);
+              CB.Object._assignSavedData(savedData, child);
               await saveRelations(relations);
             }
             savedChilds.push(child);
@@ -343,16 +393,17 @@ module.exports = function (CB) {
       if(!model.id || model.id && !(model instanceof CB.File)) {
         const saveObject = model._toSaveOrigin();
         delete saveObject.__relations;
-        const saved = await CB.crud.save(model.className, saveObject, client);
-        if(saved) model.id = saved.objectId;
+        const savedData = await CB.crud.save(model.className, saveObject, client);
+        CB.Object._assignSavedData(savedData, model);
       }
       await saveRelations(relations);
     }
     const relations = model.get('__relations');
     const saveObject = model._toSaveOrigin();
     delete saveObject.__relations;
-    const saved = await CB.crud.save(model.className, saveObject, client);
-    if(saved) model.id = saved.objectId;
+    console.log(saveObject);  //@@@@@@@@@@@@@@@@@@@@@@@@@@@
+    const savedData = await CB.crud.save(model.className, saveObject, client);
+    CB.Object._assignSavedData(savedData, model);
     await saveRelations(relations);
     //***保存所有relation
     async function saveRelations(relations) {
@@ -368,6 +419,23 @@ module.exports = function (CB) {
       }
     }
     return model;
+  };
+  /**
+   * 把已保存的原生服务器数据，传递到模型中(主要是传递objectId和附带特殊动作的属性)
+   * @param savedData
+   * @param model
+   * @private
+   */
+  CB.Object._assignSavedData = function (savedData, model) {
+    if(!savedData || JSON.stringify(savedData) === '{}') return;
+    model.id = savedData.objectId;
+    _.each(model.attributes, (value, key) => {
+      if(key.indexOf(':[action]') > 0) {
+        const _key = key.split(':[action]')[0];
+        model.attributes[_key] = savedData[_key] || null;
+        delete model.attributes[key];
+      }
+    });
   };
 
 

@@ -3,21 +3,6 @@ const moment = require('moment');
 const shortId = require('shortid');
 const Condition = require('./crud_condition');
 
-//********** Transaction Action Block Demo
-// (async () => {
-//   const client = await CB.pg.connect();
-//   try {
-//     await client.query('BEGIN');
-//     //query...
-//     await client.query('COMMIT');
-//   }catch (error) {
-//     await client.query('ROLLBACK');
-//     console.log(error);
-//   }finally {
-//     client.release();
-//   }
-// })().catch(e => console.log(e.message));
-
 module.exports = function (CB) {
   /**
    * 合并嵌套的所有子对象
@@ -51,6 +36,88 @@ module.exports = function (CB) {
       }
       _.extend(oldItem, newItem);
     }
+  };
+  /**
+   * 数据类型兼容处理
+   * 1.浮点数String转为Number
+   * 2.时间String转为Date
+   *
+   * @param row
+   * @param className
+   */
+  const compatibleDataType = (row, className) => {
+    _.each(row, (value, key) => {
+      if(_.isArray(value)) {
+        value.forEach(item => {
+          compatibleDataType({_: item}, className);
+        });
+      }
+      if(_.isObject(value) && ['Pointer', 'File'].indexOf(value.__type) > -1 && Object.keys(value).length > 3) {
+        compatibleDataType(value, value.className);
+      }
+      if(['createdAt', 'updatedAt'].indexOf(key) > -1) {
+        row[key] = new Date(value);
+      }
+    });
+    //搜索需要的列选项
+    const floatColumns = [];
+    const objectColumns = [];
+    const stringColumns = [];
+    CB.pgConfig.tableList.forEach(table => {
+      if(table.name === className) {
+        table.columns.forEach(column => {
+          if(column.type === 'money'
+            || column.type === 'real'
+            || column.type === 'double'
+            || column.type.indexOf('numeric') === 0
+            || column.type.indexOf('decimal') === 0
+          ) {
+            floatColumns.push(column);
+          }
+          if(column.type === 'object') {
+            objectColumns.push(column);
+          }
+          if(column.type === 'text'
+            || column.type.indexOf('char') === 0
+            || column.type.indexOf('character') === 0
+          ) {
+            stringColumns.push(column);
+          }
+        });
+      }
+    });
+    //处理浮点数数据
+    floatColumns.forEach((column) => {
+      const origin = row[column.name];
+      if(_.isString(origin) && origin !== '') {
+        const value = origin.replace('$', '');
+        const number = Number(value);
+        row[column.name] = !_.isNaN(number) ? number : value;
+      }
+    });
+    //处理对象数据
+    objectColumns.forEach((column) => {
+      const origin = row[column.name];
+      if(_.isString(origin) && origin !== '') {
+        row[column.name] = JSON.parse(origin);
+      }
+    });
+    //处理字符串数据
+    stringColumns.forEach((column) => {
+      const origin = row[column.name];
+      if(!origin) row[column.name] = '';
+    });
+  };
+  /**
+   * 处理服务器数据
+   * @param rows
+   * @param className
+   */
+  const handleServerData = (rows, className) => {
+    rows.forEach((row) => {
+      mergeChildren(row);
+      compatibleDataType(row, className);
+    });
   };
   /**
    * 数据库操作（数据库连接和关闭，请使用前自行实现）
@@ -118,16 +185,16 @@ module.exports = function (CB) {
           }
           if(object.type === 'array') {
             joinsSelectClause += `
-              ,CASE WHEN COUNT("${object.className}") = 0 THEN '[]' ELSE JSON_AGG("${object.className}") END AS "${object.key}"
+              ,CASE WHEN COUNT("${object.className}") = 0 THEN '[]' ELSE JSON_AGG(TO_JSON("${object.className}") ORDER BY "${object.className}"."${object.orderKey}" ${object.orderBy}) END AS "${object.key}"
             `;
             joinsRelationClause += `
-              LEFT JOIN LATERAL JSON_ARRAY_ELEMENTS("${_className}"."${object.key.replace(/^\^/, '')}") "${_className}${object.key.replace(/^\^/, '')}" ON true
+              LEFT JOIN LATERAL UNNEST("${_className}"."${object.key.replace(/^\^/, '')}") "${_className}${object.key.replace(/^\^/, '')}" ON true
               LEFT JOIN "${object.className}" ON "${_className}${object.key.replace(/^\^/, '')}" ->> 'objectId' = "${object.className}"."objectId"
             `;
           }else {
             if(isExistJointArray) {
               joinsSelectClause += `
-                ,JSON_AGG("${object.className}")->0 AS "${object.key}"
+                ,JSON_AGG(TO_JSON("${object.className}")) -> 0 AS "${object.key}"
               `;
               joinsGroupClause += `
                 ,"${object.className}"."objectId"
@@ -192,9 +259,14 @@ module.exports = function (CB) {
       //*****
       let orderClause = '', orderItems = [];
       //***主查询
-      opts.orderCollection.forEach((orderObject) => {
-        orderItems.push(`"${className}"."${orderObject.key}" ${orderObject.type}`);
-      });
+      if(opts.orderCollection.length === 0) {
+        //当未指定时，使用默认排序
+        orderItems.push(`"${className}"."createdAt" asc`);
+      }else {
+        opts.orderCollection.forEach((orderObject) => {
+          orderItems.push(`"${className}"."${orderObject.key}" ${orderObject.type}`);
+        });
+      }
       //***关联查询
       opts.includeCollection.forEach((object) => {
         (object.orderCollection || []).forEach((orderObject) => {
@@ -202,6 +274,7 @@ module.exports = function (CB) {
         });
       });
       if(orderItems.length > 0) orderClause = 'ORDER BY ' + orderItems.join(', ');
+
       //****************
       //*****查询类型
       //*****
@@ -246,9 +319,7 @@ module.exports = function (CB) {
           case 'first':
           case 'find':
             const rows = result.rows;
-            rows.forEach((row) => {
-              mergeChildren(row);
-            });
+            handleServerData(rows, className);
             if(type === 'first') return rows[0] || null;
             return rows;
           case 'count':
@@ -270,7 +341,7 @@ module.exports = function (CB) {
               return 0;
           }
         }
-        throw new Error(`[DATABASE FIND ERROR] - ${className}: [${error.code}]${error.message}`);
+        throw new Error(`[DATABASE FIND ERROR] - ${className}: [${error.code || -1}]${error.message}`);
       }
     },
     /**
@@ -280,7 +351,7 @@ module.exports = function (CB) {
      * @param client
      */
     save: async function (className, object, client) {
-      if(object.objectId) {
+      if(object.objectId && ['undefined', 'null', 'false', 'NaN'].indexOf(object.objectId) < 0) {
         return await this.update(className, object, {
           objectId: object.objectId
         }, client);
@@ -299,29 +370,57 @@ module.exports = function (CB) {
       if(_.size(object) === 0) return;
       _.extend(object, {
         objectId: shortId.generate(),
-        createdAt: new Date(),
-        updatedAt: new Date()
+        createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
+        updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
       });
+      //强制自定义objectId
       if(object['objectId:override']) {
         object.objectId = object['objectId:override'];
         delete object['objectId:override'];
       }
+      //删除无效属性
+      _.each(object, (value, key) => {
+        if(key.indexOf(':[action]remove') > 0) delete object.key;
+      });
+      //指定需要立即返回的字段
+      const returningValues = [];
+      _.each(object, (value, key) => {
+        if(key.indexOf(':[action]') > 0) returningValues.push(`"${key.split(':[action]')[0]}"`);
+      });
+      const returningClause = returningValues.length > 0 ? `RETURNING ${returningValues.join(',')}` : '';
       const spl = `
         INSERT INTO 
-          "${className}" ("${_.keys(object).map(key => key.replace(':increment', '')).join('","')}") 
+          "${className}" ("${
+            Object.keys(object).map((key) => {
+              if(key.indexOf(':[action]') > 0) key = key.split(':[action]')[0];
+              return key;
+            }).join('","')
+          }") 
         VALUES
           (${_.map(new Array(_.size(object)), (value, index) => {
             return '$' + (index + 1);
           }).join(',')})
+        ${returningClause}
       `;
       printSql(spl, className, 'insert');
       const params = _.values(object);
       const _client = client || await CB.pg.connect();
       try {
-        await _client.query(spl, params);
+        const result = await _client.query(spl, params);
+        if(returningValues.length > 0) {
+          result.rows.forEach((row) => {
+            _.each(object, (value, key) => {
+              if(key.indexOf(':[action]') > 0) {
+                const _key = key.split(':[action]')[0];
+                object[_key] = row[_key] || null;
+                delete object[key];
+              }
+            });
+          });
+        }
         return object;
       }catch (error) {
-        throw new Error(`[DATABASE INSERT ERROR] - ${className}: [${error.code}]${error.message}`);
+        throw new Error(`[DATABASE INSERT ERROR] - ${className}: [${error.code || -1}]${error.message}`);
       }finally {
         if(!client) _client.release();
       }
@@ -337,12 +436,18 @@ module.exports = function (CB) {
     update: async function (className, object, condition, client) {
       if(_.size(object) === 0) return;
       _.extend(object, {
-        updatedAt: new Date()
+        updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
       });
       const tmpObject = _.clone(object);
       _.each(condition, (value, key) => {
         delete tmpObject[key];
       });
+      //指定需要立即返回的字段
+      const returningValues = [];
+      _.each(tmpObject, (value, key) => {
+        if(key.indexOf(':[action]') > 0) returningValues.push(`"${key.split(':[action]')[0]}"`);
+      });
+      const returningClause = returningValues.length > 0 ? `RETURNING ${returningValues.join(',')}` : '';
       let index = 0;
       const spl = `
         UPDATE 
@@ -350,8 +455,26 @@ module.exports = function (CB) {
         SET
           ${_.map(tmpObject, (value, key) => {
             index++;
-            if(key.indexOf(':increment') > 0) {
-              return `"${key.replace(':increment', '')}" = "${key.replace(':increment', '')}" ${value < 0 ? '-' : '+'} $${index}`;
+            //特殊属性处理
+            if(key.indexOf(':[action]increment') > 0) {
+              const _key = key.replace(':[action]increment', '');
+              return `"${_key}" = "${_key}" + $${index}`;
+            }
+            if(key.indexOf(':[action]append') > 0) {
+              const _key = key.replace(':[action]append', '');
+              return `"${_key}" = array_append("${_key}", $${index})`;
+            }
+            if(key.indexOf(':[action]prepend') > 0) {
+              const _key = key.replace(':[action]prepend', '');
+              return `"${_key}" = array_prepend("${_key}", $${index})`;
+            }
+            if(key.indexOf(':[action]concat') > 0) {
+              const _key = key.replace(':[action]concat', '');
+              return `"${_key}" = array_cat("${_key}", $${index})`;
+            }
+            if(key.indexOf(':[action]remove') > 0) {
+              const _key = key.replace(':[action]remove', '');
+              return `"${_key}" = array_remove("${_key}", $${index})`;
             }
             return `"${key}" = $${index}`;
           }).join(',')}
@@ -362,15 +485,27 @@ module.exports = function (CB) {
               return `"${key}" = $${index}`;
             }).join(',')
           }
+        ${returningClause}
       `;
       printSql(spl, className, 'update');
       const params = _.values(tmpObject).concat(_.values(condition));
       const _client = client || await CB.pg.connect();
       try {
-        await _client.query(spl, params);
+        const result = await _client.query(spl, params);
+        if(returningValues.length > 0) {
+          result.rows.forEach((row) => {
+            _.each(object, (value, key) => {
+              if(key.indexOf(':[action]') > 0) {
+                const _key = key.split(':[action]')[0];
+                object[_key] = row[_key] || null;
+                delete object[key];
+              }
+            });
+          });
+        }
         return object;
       }catch (error) {
-        throw new Error(`[DATABASE UPDATE ERROR] - ${className}: [${error.code}]${error.message}`);
+        throw new Error(`[DATABASE UPDATE ERROR] - ${className}: [${error.code || -1}]${error.message}`);
       }finally {
         if(!client) _client.release();
       }
@@ -401,7 +536,7 @@ module.exports = function (CB) {
         await _client.query(spl, params);
         return 'ok';
       }catch (error) {
-        throw new Error(`[DATABASE DELETE ERROR] - ${className}: [${error.code}]${error.message}`);
+        throw new Error(`[DATABASE DELETE ERROR] - ${className}: [${error.code || -1}]${error.message}`);
       }finally {
         if(!client) _client.release();
       }
