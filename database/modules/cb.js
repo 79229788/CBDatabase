@@ -8,7 +8,7 @@ const EmptyConstructor = function EmptyConstructor() {};
 // Helper function to correctly set up the prototype chain, for subclasses.
 // Similar to `goog.inherits`, but uses a hash of prototype properties and
 // class properties to be extended.
-const inherits = function inherits(parent, protoProps, staticProps) {
+const inherits = function (parent, protoProps, staticProps) {
   let child;
   // The constructor function for the new subclass is either defined by you
   // (the "constructor" property in your `extend` definition), or defaulted

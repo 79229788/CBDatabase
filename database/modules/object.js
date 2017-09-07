@@ -13,6 +13,7 @@ const checkReservedKey = function checkReservedKey(key) {
 
 module.exports = function (CB) {
   CB.Object = function (attributes, options) {
+    if(_.isString(attributes)) return new CB.Object({className: attributes});
     attributes = attributes || {};
     if(attributes.constructor === this.constructor) attributes = attributes.toOrigin();
     this.parseDefaultDate(attributes);
@@ -22,13 +23,16 @@ module.exports = function (CB) {
     this.set(attributes);
     const previous = this.toOrigin();
     delete previous.objectId;
+    delete previous.className;
+    delete previous.__type;
     this._previousModel = this.clone();
     this._previousAttributes = previous;
     this.init.apply(this, arguments);
   };
 
   _.extend(CB.Object.prototype, {
-
+    _type: '',
+    _className: '',
     init: function() {},
 
     /**
@@ -97,9 +101,9 @@ module.exports = function (CB) {
         if(!this._serverData) checkReservedKey(key);
         attrs[key] = CB._encode(value, key);
       }
-      this.id = attrs.objectId || '';
-      this._className = attrs.className || '';
-      this._type = attrs.__type || '';
+      if(attrs.objectId) this.id = attrs.objectId;
+      if(attrs._className) this.__proto__._className = attrs.className;
+      if(attrs._type) this.__proto__._type = attrs.__type;
       this.attributes = attrs;
       delete attrs.objectId;
       delete attrs.className;
@@ -442,30 +446,9 @@ module.exports = function (CB) {
   //********************************其它
   //********************************
   //********************************
-
-  // Set up a map of className to class so that we can create new instances of
-  // CB Objects from JSON automatically.
   CB.Object._classMap = {};
-
   CB.Object._extend = CB._extend;
-
-  /**
-   * Creates a new model with defined attributes,
-   * It's the same with
-   * <pre>
-   *   new CB.Object(attributes, options);
-   *  </pre>
-   * @param {Object} attributes The initial set of data to store in the object.
-   * @param {Object} options A set of Backbone-like options for creating the
-   *     object.  The only option currently supported is "collection".
-   * @return {CB.Object}
-   */
-  CB.Object['new'] = function (attributes, options) {
-    return new CB.Object(attributes, options);
-  };
-
   CB.Object.extend = function (className, protoProps, classProps) {
-    // Handle the case with only two args.
     if(!_.isString(className)) {
       if (className && _.has(className, "className")) {
         return CB.Object.extend(className.className, className, protoProps);
@@ -473,15 +456,12 @@ module.exports = function (CB) {
         throw new Error("CB.Object.extend's first argument should be the className.");
       }
     }
-    // If someone tries to subclass "User", coerce it to the right type.
-    if(className === "User") className = "_User";
+    if(className === 'User') className = '_User';
+    if(className === 'File') className = '_File';
 
     let NewClassObject = null;
     if(_.has(CB.Object._classMap, className)) {
       const OldClassObject = CB.Object._classMap[className];
-      // This new subclass has been told to extend both from "this" and from
-      // OldClassObject. This is multiple inheritance, which isn't supported.
-      // For now, let's just pick one.
       if(protoProps || classProps) {
         NewClassObject = OldClassObject._extend(protoProps, classProps);
       }else {
@@ -492,22 +472,10 @@ module.exports = function (CB) {
       protoProps._className = className;
       NewClassObject = this._extend(protoProps, classProps);
     }
-    // Extending a subclass should reuse the classname automatically.
-    NewClassObject.extend = function (arg0) {
-      if(_.isString(arg0) || arg0 && _.has(arg0, "className")) {
-        return CB.Object.extend.apply(NewClassObject, arguments);
-      }
-      const newArguments = [className].concat(_.toArray(arguments));
-      return CB.Object.extend.apply(NewClassObject, newArguments);
-    };
-    NewClassObject['new'] = function (attributes, options) {
-      return new NewClassObject(attributes, options);
-    };
     CB.Object._classMap[className] = NewClassObject;
     return NewClassObject;
   };
 
-  // ES6 class syntax support
   Object.defineProperty(CB.Object.prototype, 'className', {
     get: function () {
       return this._className;

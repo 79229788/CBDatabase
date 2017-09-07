@@ -24,32 +24,25 @@ CB.initSessionRedis({
   password      : config_redis.redis.sessionRedis.password,
 });
 
-const Employee = CB.Object.extend('Employee');
+//const Employee = CB.Object.extend('Employee');
 const Company = CB.Object.extend('Company');
 
-const query = new CB.UserQuery(Employee);
-query.include('defaultCompany', Company);
-query.get('B1lG6qnsK-').then(function (data) {
-  console.log(data.toOrigin());
-}).catch(function (error) {
-  console.log(error);
-});
-
-
-
-
-// const query = new CB.Query('Customer');
-// query.includeArray('levels', CustomerLevel);
-// query.include('cate', CustomerCate);
-// query.include('cate.company', Company);
-// query.include('avatar', '_File');
-// query.find().then(function (data) {
-//   console.log(data[0].get('cate'));
+// const query = new CB.UserQuery(Employee);
+// query.include('defaultCompany', Company);
+// query.get('B1lG6qnsK-').then(function (data) {
+//   console.log(data.toOrigin());
 // }).catch(function (error) {
 //   console.log(error);
 // });
 
-
+const company = new Company();
+company.set('name', '测试');
+console.log(company);
+// company.save().then(() => {
+//   console.log(company);
+// }).catch(error => {
+//   console.log(error);
+// });
 
 // (async () => {
 //   try {
