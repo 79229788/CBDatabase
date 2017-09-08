@@ -33,8 +33,10 @@ module.exports = function (CB) {
   _.extend(CB.Object.prototype, {
     _type: '',
     _className: '',
+    /**
+     * 初始化
+     */
     init: function() {},
-
     /**
      * 解析默认日期属性
      * @param object
@@ -90,24 +92,24 @@ module.exports = function (CB) {
     set: function set(key, value) {
       if(!key) return this;
       let attrs = this.attributes || {};
-      if (_.isObject(key)) {
+      if(_.isObject(key)) {
         const object = {};
         _.each(key, (v, k) => {
           if(!this._serverData) checkReservedKey(k);
           object[k] = CB._encode(v, k);
         });
         attrs = _.extend({}, this.attributes, object);
-      } else {
+      }else {
         if(!this._serverData) checkReservedKey(key);
         attrs[key] = CB._encode(value, key);
       }
       if(attrs.objectId) this.id = attrs.objectId;
-      if(attrs._className) this.__proto__._className = attrs.className;
-      if(attrs._type) this.__proto__._type = attrs.__type;
+      if(attrs.className) this._className = attrs.className;
+      if(attrs.__type) this._type = attrs.__type;
       this.attributes = attrs;
-      delete attrs.objectId;
-      delete attrs.className;
-      delete attrs.__type;
+      delete this.attributes.objectId;
+      delete this.attributes.className;
+      delete this.attributes.__type;
       return this;
     },
     /**

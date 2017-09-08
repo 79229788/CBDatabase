@@ -303,13 +303,13 @@ module.exports = function (CB) {
       if(data.length === 0) return [];
       return data.map((item) => {
         if(this.isUserQuery) {
-          const user = new CB.User(item, {serverData: true});
-          user.setChildClass(this.className);
-          return user;
+          return new CB.User(_.extend(item, {
+            className: this.className
+          }), {serverData: true});
         }
-        const object = new CB.Object(item, {serverData: true});
-        object._className = this.className;
-        return object;
+        return new CB.Object(_.extend(item, {
+          className: this.className
+        }), {serverData: true});
       });
     },
     /**
@@ -321,13 +321,13 @@ module.exports = function (CB) {
       const data = await CB.crud.find(this.className, 'first', this._queryOptions, client);
       if(!data) return null;
       if(this.isUserQuery) {
-        const user = new CB.User(data, {serverData: true});
-        user.setChildClass(this.className);
-        return user;
+        return new CB.User(_.extend(data, {
+          className: this.className
+        }), {serverData: true});
       }
-      const object = new CB.Object(data, {serverData: true});
-      object._className = this.className;
-      return object;
+      return new CB.Object(_.extend(data, {
+        className: this.className
+      }), {serverData: true});
     },
     /**
      * 获取数据数量

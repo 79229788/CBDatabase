@@ -188,8 +188,8 @@ module.exports = function (CB) {
               ,CASE WHEN COUNT("${object.className}") = 0 THEN '[]' ELSE JSON_AGG(TO_JSON("${object.className}") ORDER BY "${object.className}"."${object.orderKey}" ${object.orderBy}) END AS "${object.key}"
             `;
             joinsRelationClause += `
-              LEFT JOIN LATERAL UNNEST("${_className}"."${object.key.replace(/^\^/, '')}") "${_className}${object.key.replace(/^\^/, '')}" ON true
-              LEFT JOIN "${object.className}" ON "${_className}${object.key.replace(/^\^/, '')}" ->> 'objectId' = "${object.className}"."objectId"
+              LEFT JOIN LATERAL UNNEST("${_className}"."${_tailKey.replace(/^\^/, '')}") "${_className}${_tailKey.replace(/^\^/, '')}" ON true
+              LEFT JOIN "${object.className}" ON "${_className}${_tailKey.replace(/^\^/, '')}" ->> 'objectId' = "${object.className}"."objectId"
             `;
           }else {
             if(isExistJointArray) {
