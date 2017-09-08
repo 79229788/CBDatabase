@@ -68,6 +68,8 @@ module.exports = function (CB) {
     isChanged: function () {
       const current = this.toOrigin();
       delete current.objectId;
+      delete current.className;
+      delete current.__type;
       return !_.isEqual(current, this._previousAttributes);
     },
     /**
