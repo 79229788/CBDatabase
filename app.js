@@ -34,72 +34,43 @@ const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
-// const query = new CB.Query(Product);
-// query.include('priceMap', ProductPriceMap);
-// query.include('priceMap.company', Company);
-// query.includeArray('priceMap.levels', ProductPriceLevel);
-// query.get('BkNzKkik5Z').then(function (data) {
-//   console.log(data.toOrigin());
-// }).catch(function (error) {
-//   console.log(error);
-// });
-
-// const query = new CB.Query(ProductPriceMap);
-// query.includeArray('levels', ProductPriceLevel);
-// query.get('ry7MKysk5Z').then(function (data) {
-//   console.log(data.toOrigin());
-// }).catch(function (error) {
-//   console.log(error);
-// });
-
-// const file = CB.File.withURL('logo', '#');
-//
-// const level1 = new ProductPriceLevel();
-// level1.set('name', '等级一价格');
-// level1.set('file', file);
-// const level2 = new ProductPriceLevel();
-// level2.set('name', '等级二价格');
-//
-// const alone1 = new ProductPriceAlone();
-// alone1.set('name', '独立一价格');
-// const alone2 = new ProductPriceAlone();
-// alone2.set('name', '独立二价格');
-//
-// const priceMap = new ProductPriceMap();
-// priceMap.set('levels', [level1, level2]);
-// priceMap.set('alones', [alone1, alone2]);
-//
-// const product = new Product();
-// product.set('name', '测试');
-// product.set('priceMap', priceMap);
-// //console.log(product.toOrigin());
-// console.log(product.getChildrenDeep());
-
-
-
-CB.Cloud.Transaction(async (client) => {
-  const cate = new ProductCate();
-  cate.id = 'B1YNCcJqb';
-
-  const level1 = new ProductPriceLevel();
-  level1.set('name', '等级一价格');
-  const level2 = new ProductPriceLevel();
-  level2.set('name', '等级二价格');
-
-  const alone1 = new ProductPriceAlone();
-  alone1.set('name', '独立一价格');
-  const alone2 = new ProductPriceAlone();
-  alone2.set('name', '独立二价格');
-
-  const priceMap = new ProductPriceMap();
-  priceMap.set('levels', [level1, level2]);
-  priceMap.set('alones', [alone1, alone2]);
-
-  const product = new Product();
-  product.set('name', '测试');
-  product.set('cate', cate);
-  product.set('priceMap', priceMap);
-  await product.save(client);
-}).catch(error => {
+const query = new CB.Query(Product);
+query.include('priceMap', ProductPriceMap);
+query.include('priceMap.company', Company);
+query.includeArray('priceMap.levels', ProductPriceLevel);
+query.get('ByBEfoQl9Z').then(function (data) {
+  console.log(data.toOrigin());
+}).catch(function (error) {
   console.log(error);
 });
+
+
+// CB.Cloud.Transaction(async (client) => {
+//   const cate = new ProductCate();
+//   cate.id = 'B1YNCcJqb';
+//
+//   const file = CB.File.withURL('logo', '#');
+//
+//   const level1 = new ProductPriceLevel();
+//   level1.set('name', '等级一价格');
+//   level1.set('icon', file);
+//   const level2 = new ProductPriceLevel();
+//   level2.set('name', '等级二价格');
+//
+//   const alone1 = new ProductPriceAlone();
+//   alone1.set('name', '独立一价格');
+//   const alone2 = new ProductPriceAlone();
+//   alone2.set('name', '独立二价格');
+//
+//   const priceMap = new ProductPriceMap();
+//   priceMap.set('levels', [level1, level2]);
+//   priceMap.set('alones', [alone1, alone2]);
+//
+//   const product = new Product();
+//   product.set('name', '测试');
+//   product.set('cate', cate);
+//   product.set('priceMap', priceMap);
+//   await product.save(client);
+// }).catch(error => {
+//   console.log(error);
+// });

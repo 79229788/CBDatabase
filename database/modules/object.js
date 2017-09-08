@@ -401,13 +401,17 @@ module.exports = function (CB) {
     for(let key of Object.keys(children)) {
       const childModels = children[key];
       for(child of childModels) {
-        if(child.isChanged()) {
-          const relations = child.get('__relations');
-          const saveObject = child._toSaveOrigin();
-          delete saveObject.__relations;
-          const savedData = await CB.crud.save(child.className, saveObject, client);
-          CB.Object._assignSavedData(savedData, child);
-          await saveRelations(relations);
+        if(child instanceof CB.File) {
+          await child.save(client);
+        }else {
+          if(child.isChanged()) {
+            const relations = child.get('__relations');
+            const saveObject = child._toSaveOrigin();
+            delete saveObject.__relations;
+            const savedData = await CB.crud.save(child.className, saveObject, client);
+            CB.Object._assignSavedData(savedData, child);
+            await saveRelations(relations);
+          }
         }
       }
     }
