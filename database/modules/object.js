@@ -275,8 +275,8 @@ module.exports = function (CB) {
       };
     },
     /**
-     * 获取所有子类（不是深度获取）
-     * @return *{有子类的属性: 对应的models};
+     * 获取所有子类
+     * @return *{有子类的属性key: 对应的models};
      */
     getChildren: function () {
       const child = {};
@@ -297,8 +297,35 @@ module.exports = function (CB) {
       }
       return child;
     },
-
-
+    /**
+     * [深度]获取所有子类）
+     * @return *{有子类的属性key: 对应的models};
+     */
+    getChildrenDeep: function () {
+      const child = {};
+      (function traverse(object, key) {
+        if(object instanceof CB.Object || object instanceof CB.File) {
+          if(object instanceof CB.Object) traverse(object.attributes, key);
+          if(key) {
+            if(!child[key]) child[key] = [];
+            child[key].push(object);
+          }
+          return;
+        }
+        if(_.isArray(object)) {
+          object.forEach(item => {
+            traverse(item, key);
+          });
+          return;
+        }
+        if(_.isObject(object)) {
+          _.each(object, function (value, key) {
+            traverse(value, key);
+          });
+        }
+      })(this);
+      return child;
+    },
     /**
      * 保存数据
      * @return {*}
@@ -369,42 +396,22 @@ module.exports = function (CB) {
    * @private
    */
   CB.Object._deepSaveAsync = async function (model, client) {
-    const unsavedChildren = [];
-    const unsavedFiles = [];
-    CB.Object._deepFindUnsavedChildren(model, unsavedChildren, unsavedFiles);
-    //保存所有模型到服务器
-    for(let model of unsavedChildren) {
-      const children = model.getChildren(); //获取第一层的子类集合（非深度）
-      //***保存所有子类
-      for(let key of Object.keys(children)) {
-        const childs = children[key];
-        if(childs.length > 0) {
-          //存在子类时，先保存全部子类
-          const savedChilds = [];
-          for(child of childs) {
-            if(!child.id || child.id && !(child instanceof CB.File)) {
-              const relations = child.get('__relations');
-              const saveObject = child._toSaveOrigin();
-              delete saveObject.__relations;
-              const savedData = await CB.crud.save(child.className, saveObject, client);
-              CB.Object._assignSavedData(savedData, child);
-              await saveRelations(relations);
-            }
-            savedChilds.push(child);
-          }
-          //然后在保存父模型以及其包含的子类
-          model.set(key, _.isArray(model.get(key)) ? savedChilds : savedChilds[0]);
+    //***先保存当前模型所有子类
+    const children = model.getChildrenDeep();
+    for(let key of Object.keys(children)) {
+      const childModels = children[key];
+      for(child of childModels) {
+        if(child.isChanged()) {
+          const relations = child.get('__relations');
+          const saveObject = child._toSaveOrigin();
+          delete saveObject.__relations;
+          const savedData = await CB.crud.save(child.className, saveObject, client);
+          CB.Object._assignSavedData(savedData, child);
+          await saveRelations(relations);
         }
       }
-      const relations = model.get('__relations');
-      if(!model.id || model.id && !(model instanceof CB.File)) {
-        const saveObject = model._toSaveOrigin();
-        delete saveObject.__relations;
-        const savedData = await CB.crud.save(model.className, saveObject, client);
-        CB.Object._assignSavedData(savedData, model);
-      }
-      await saveRelations(relations);
     }
+    //***再保存当前模型
     const relations = model.get('__relations');
     const saveObject = model._toSaveOrigin();
     delete saveObject.__relations;

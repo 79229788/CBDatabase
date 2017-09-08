@@ -52,6 +52,31 @@ const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 //   console.log(error);
 // });
 
+// const file = CB.File.withURL('logo', '#');
+//
+// const level1 = new ProductPriceLevel();
+// level1.set('name', '等级一价格');
+// level1.set('file', file);
+// const level2 = new ProductPriceLevel();
+// level2.set('name', '等级二价格');
+//
+// const alone1 = new ProductPriceAlone();
+// alone1.set('name', '独立一价格');
+// const alone2 = new ProductPriceAlone();
+// alone2.set('name', '独立二价格');
+//
+// const priceMap = new ProductPriceMap();
+// priceMap.set('levels', [level1, level2]);
+// priceMap.set('alones', [alone1, alone2]);
+//
+// const product = new Product();
+// product.set('name', '测试');
+// product.set('priceMap', priceMap);
+// //console.log(product.toOrigin());
+// console.log(product.getChildrenDeep());
+
+
+
 CB.Cloud.Transaction(async (client) => {
   const cate = new ProductCate();
   cate.id = 'B1YNCcJqb';
@@ -75,7 +100,6 @@ CB.Cloud.Transaction(async (client) => {
   product.set('cate', cate);
   product.set('priceMap', priceMap);
   await product.save(client);
-  throw new Error('error');
 }).catch(error => {
   console.log(error);
 });

@@ -65,29 +65,29 @@ CB._extend = function (protoProps, classProps) {
 };
 
 // 深度遍历CBObject属性
-CB._traverse = function (object, func) {
+CB._traverse = function (object, cb) {
   if(object instanceof CB.Object) {
-    CB._traverse(object.attributes, func);
-    return func(object);
+    CB._traverse(object.attributes, cb);
+    return cb(object);
   }
   if(object instanceof CB.Relation || object instanceof CB.File) {
-    return func(object);
+    return cb(object);
   }
   if(_.isArray(object)) {
     _.each(object, function (child, index) {
-      const newChild = CB._traverse(child, func);
+      const newChild = CB._traverse(child, cb);
       if (newChild) object[index] = newChild;
     });
-    return func(object);
+    return cb(object);
   }
   if(_.isObject(object)) {
     _.each(object, function (child, key) {
-      const newChild = key === '__relations' ? child : CB._traverse(child, func);
+      const newChild = key === '__relations' ? child : CB._traverse(child, cb);
       if (newChild) object[key] = newChild;
     });
-    return func(object);
+    return cb(object);
   }
-  return func(object);
+  return cb(object);
 };
 
 /**
