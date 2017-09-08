@@ -22,7 +22,7 @@ module.exports = function (CB) {
     this._hasData = (options || {}).hasData || true;
     this.set(attributes);
     const previous = this.toOrigin();
-    delete previous.objectId; //记录上一个数据时删除id，为了在判断模型是否更新时，id不做参考（即：模型如果仅仅修改了id，不算是对当前模型进行了更新）
+    delete previous.objectId; //记录初始原型数据时删除id，为了在判断模型是否更新时，id不做参考（即：模型如果仅仅修改了id，不算是对当前模型进行了更新）
     this._previousModel = this.clone();
     this._previousAttributes = previous;
     this.init.apply(this, arguments);
