@@ -23,8 +23,6 @@ module.exports = function (CB) {
     this.set(attributes);
     const previous = this.toOrigin();
     delete previous.objectId;
-    delete previous.className;
-    delete previous.__type;
     this._previousModel = this.clone();
     this._previousAttributes = previous;
     this.init.apply(this, arguments);
@@ -68,8 +66,6 @@ module.exports = function (CB) {
     isChanged: function () {
       const current = this.toOrigin();
       delete current.objectId;
-      delete current.className;
-      delete current.__type;
       return !_.isEqual(current, this._previousAttributes);
     },
     /**
