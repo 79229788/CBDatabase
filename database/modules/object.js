@@ -401,7 +401,7 @@ module.exports = function (CB) {
     for(let key of Object.keys(children)) {
       const childModels = children[key];
       for(child of childModels) {
-        if(child instanceof CB.File) {
+        if(child instanceof CB.File && !child.getUrl() && !child.id) {
           await child.save(client);
         }else {
           if(child.isChanged()) {
