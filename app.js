@@ -35,13 +35,14 @@ const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
 const query = new CB.Query(Product);
-query.include('cate', ProductCate);
-query.include('subCate', ProductCate);
-query.include('priceMap', ProductPriceMap);
-query.includeArray('priceMap.levels', ProductPriceLevel);
-query.includeArray('priceMap.alones', ProductPriceAlone);
+query.select('name');
+// query.include('cate', ProductCate);
+// query.include('subCate', ProductCate);
+// query.include('priceMap', ProductPriceMap);
+// query.includeArray('priceMap.levels', ProductPriceLevel);
+// query.includeArray('priceMap.alones', ProductPriceAlone);
 query.get('HyHKkbEZcb').then(function (data) {
-  console.log(data);
+  console.log(data.toOrigin());
 }).catch(function (error) {
   console.log(error);
 });

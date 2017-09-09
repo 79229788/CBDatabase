@@ -46,8 +46,9 @@ module.exports = function (CB) {
    *
    * @param row
    * @param className
+   * @param selectItems
    */
-  const compatibleDataType = (row, className) => {
+  const compatibleDataType = (row, className, selectItems) => {
     _.each(row, (value, key) => {
       if(_.isArray(value)) {
         value.forEach(item => {
@@ -67,7 +68,8 @@ module.exports = function (CB) {
     const stringColumns = [];
     CB.pgConfig.tableList.forEach(table => {
       if(table.name === className) {
-        table.columns.forEach(column => {
+        for(let column of table.columns) {
+          if(selectItems.length > 0 && selectItems.indexOf(column) < 0) continue;
           if(column.type === 'money'
             || column.type === 'real'
             || column.type === 'double'
@@ -85,7 +87,7 @@ module.exports = function (CB) {
           ) {
             stringColumns.push(column);
           }
-        });
+        }
       }
     });
     //处理浮点数数据
@@ -114,11 +116,12 @@ module.exports = function (CB) {
    * 处理服务器数据
    * @param rows
    * @param className
+   * @param selectItems
    */
-  const handleServerData = (rows, className) => {
+  const handleServerData = (rows, className, selectItems) => {
     rows.forEach((row) => {
       mergeChildren(row);
-      compatibleDataType(row, className);
+      compatibleDataType(row, className, selectItems);
     });
   };
   /**
@@ -324,7 +327,7 @@ module.exports = function (CB) {
           case 'first':
           case 'find':
             const rows = result.rows;
-            handleServerData(rows, className);
+            handleServerData(rows, className, _.flatten(opts.selectCollection));
             if(type === 'first') return rows[0] || null;
             return rows;
           case 'count':
@@ -396,15 +399,15 @@ module.exports = function (CB) {
       const spl = `
         INSERT INTO 
           "${className}" ("${
-            Object.keys(object).map((key) => {
-              if(key.indexOf(':[action]') > 0) key = key.split(':[action]')[0];
-              return key;
-            }).join('","')
-          }") 
+        Object.keys(object).map((key) => {
+          if(key.indexOf(':[action]') > 0) key = key.split(':[action]')[0];
+          return key;
+        }).join('","')
+        }") 
         VALUES
           (${_.map(new Array(_.size(object)), (value, index) => {
-            return '$' + (index + 1);
-          }).join(',')})
+        return '$' + (index + 1);
+      }).join(',')})
         ${returningClause}
       `;
       printSql(spl, className, 'insert');
@@ -459,37 +462,37 @@ module.exports = function (CB) {
           "${className}" 
         SET
           ${_.map(tmpObject, (value, key) => {
-            index++;
-            //特殊属性处理
-            if(key.indexOf(':[action]increment') > 0) {
-              const _key = key.replace(':[action]increment', '');
-              return `"${_key}" = "${_key}" + $${index}`;
-            }
-            if(key.indexOf(':[action]append') > 0) {
-              const _key = key.replace(':[action]append', '');
-              return `"${_key}" = array_append("${_key}", $${index})`;
-            }
-            if(key.indexOf(':[action]prepend') > 0) {
-              const _key = key.replace(':[action]prepend', '');
-              return `"${_key}" = array_prepend("${_key}", $${index})`;
-            }
-            if(key.indexOf(':[action]concat') > 0) {
-              const _key = key.replace(':[action]concat', '');
-              return `"${_key}" = array_cat("${_key}", $${index})`;
-            }
-            if(key.indexOf(':[action]remove') > 0) {
-              const _key = key.replace(':[action]remove', '');
-              return `"${_key}" = array_remove("${_key}", $${index})`;
-            }
-            return `"${key}" = $${index}`;
-          }).join(',')}
+        index++;
+        //特殊属性处理
+        if(key.indexOf(':[action]increment') > 0) {
+          const _key = key.replace(':[action]increment', '');
+          return `"${_key}" = "${_key}" + $${index}`;
+        }
+        if(key.indexOf(':[action]append') > 0) {
+          const _key = key.replace(':[action]append', '');
+          return `"${_key}" = array_append("${_key}", $${index})`;
+        }
+        if(key.indexOf(':[action]prepend') > 0) {
+          const _key = key.replace(':[action]prepend', '');
+          return `"${_key}" = array_prepend("${_key}", $${index})`;
+        }
+        if(key.indexOf(':[action]concat') > 0) {
+          const _key = key.replace(':[action]concat', '');
+          return `"${_key}" = array_cat("${_key}", $${index})`;
+        }
+        if(key.indexOf(':[action]remove') > 0) {
+          const _key = key.replace(':[action]remove', '');
+          return `"${_key}" = array_remove("${_key}", $${index})`;
+        }
+        return `"${key}" = $${index}`;
+      }).join(',')}
         WHERE
           ${
-            _.map(condition, (value, key) => {
-              index++;
-              return `"${key}" = $${index}`;
-            }).join(',')
-          }
+        _.map(condition, (value, key) => {
+          index++;
+          return `"${key}" = $${index}`;
+        }).join(',')
+        }
         ${returningClause}
       `;
       printSql(spl, className, 'update');
@@ -528,18 +531,18 @@ module.exports = function (CB) {
           "${className}" 
         WHERE 
           ${
-            _.map(condition, (value, key) => {
+        _.map(condition, (value, key) => {
+          index++;
+          if(key.indexOf(':batch') > 0) {
+            return `"${key.replace(':batch', '')}" = ANY(VALUES ${value.map(() => {
+              const item = `($${index})`;
               index++;
-              if(key.indexOf(':batch') > 0) {
-                return `"${key.replace(':batch', '')}" = ANY(VALUES ${value.map(() => {
-                  const item = `($${index})`;
-                  index++;
-                  return item;
-                }).join(',')})`;
-              }
-              return `"${key}" = $${index}`;
-            }).join(',')
-          } 
+              return item;
+            }).join(',')})`;
+          }
+          return `"${key}" = $${index}`;
+        }).join(',')
+        } 
       `;
       printSql(spl, className, 'delete');
       const params = [];
