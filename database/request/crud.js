@@ -52,11 +52,11 @@ module.exports = function (CB) {
     _.each(row, (value, key) => {
       if(_.isArray(value)) {
         value.forEach(item => {
-          compatibleDataType({_: item}, className);
+          compatibleDataType({_: item}, className, selectItems);
         });
       }
       if(_.isObject(value) && ['Pointer', 'File'].indexOf(value.__type) > -1 && Object.keys(value).length > 3) {
-        compatibleDataType(value, value.className);
+        compatibleDataType(value, value.className, selectItems);
       }
       if(['createdAt', 'updatedAt'].indexOf(key) > -1) {
         row[key] = new Date(value);
