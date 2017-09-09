@@ -34,15 +34,10 @@ const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
-const query = new CB.Query(Product);
-query.include('priceMap', ProductPriceMap);
-query.include('priceMap.company', Company);
-query.includeArray('priceMap.levels', ProductPriceLevel);
-query.includeArray('priceMap.alones', ProductPriceAlone);
-query.get('HyHKkbEZcb').then(function (data) {
-  //console.log(data.get('priceMap').get('company').toOrigin());
-  //console.log(data.get('priceMap').get('levels').map(item => item.toOrigin()));
-  //console.log(data.get('priceMap').get('alones').map(item => item.toOrigin()));
+const query = new CB.Query(ProductPriceLevel);
+query.equalTo('objectId', ['B1ZFkWNZq-', 'SkxYy-Eb5b']);
+query.find().then(function (data) {
+  console.log(data);
 }).catch(function (error) {
   console.log(error);
 });

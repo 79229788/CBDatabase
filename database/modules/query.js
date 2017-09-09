@@ -136,89 +136,282 @@ module.exports = function (CB) {
         type: type
       });
     },
-    //*****基本类型判断
+    //*************************************基本类型判断
+    //*************************************
+    /**
+     * 值相等
+     * @param key
+     * @param value
+     * @param name
+     * @return {*}
+     */
     equalTo: function (key, value, name) {
-      if(value instanceof CB.Object) return this._jsonCondition(key, 'objectId', value.id, name, 'equalInJson');
+      if(value instanceof CB.Object || value instanceof CB.File) {
+        return this._jsonCondition(key, 'objectId', value.id, name, 'equalInJson');
+      }
+      if(_.isArray(value)) {
+        return this._baseCondition(key, value, name, 'equals');
+      }
       this._baseCondition(key, value, name, 'equal');
     },
+    /**
+     * 值不相等
+     * @param key
+     * @param value
+     * @param name
+     * @return {*}
+     */
     notEqualTo: function (key, value, name) {
       this._baseCondition(key, value, name, 'notEqual');
     },
+    /**
+     * 值大于
+     * @param key
+     * @param value
+     * @param name
+     * @return {*}
+     */
     greaterThan: function (key, value, name) {
       this._baseCondition(key, value, name, 'greaterThan');
     },
+    /**
+     * 值大于等于
+     * @param key
+     * @param value
+     * @param name
+     * @return {*}
+     */
     greaterThanOrEqual: function (key, value, name) {
       this._baseCondition(key, value, name, 'greaterThanOrEqual');
     },
+    /**
+     * 值小雨
+     * @param key
+     * @param value
+     * @param name
+     * @return {*}
+     */
     lessThan: function (key, value, name) {
       this._baseCondition(key, value, name, 'lessThan');
     },
+    /**
+     * 值小于等于
+     * @param key
+     * @param value
+     * @param name
+     * @return {*}
+     */
     lessThanOrEqual: function (key, value, name) {
       this._baseCondition(key, value, name, 'lessThanOrEqual');
     },
+    /**
+     * 值前缀
+     * @param key
+     * @param value
+     * @param name
+     * @return {*}
+     */
     prefixText: function (key, value, name) {
       this._baseCondition(key, value, name, 'prefixText');
     },
+    /**
+     * 值后缀
+     * @param key
+     * @param value
+     * @param name
+     * @return {*}
+     */
     suffixText: function (key, value, name) {
       this._baseCondition(key, value, name, 'suffixText');
     },
+    /**
+     * 值字符包含
+     * @param key
+     * @param value
+     * @param name
+     * @return {*}
+     */
     containsText: function (key, value, name) {
       this._baseCondition(key, value, name, 'containsText');
     },
-    //*****数组类型判断
-    containsAllArray: function (key, value, name) {
-      this._baseCondition(key, value, name, 'containsAllArray');
+    //*************************************数组类型判断
+    //*************************************
+    /**
+     * [数组属性]全部包含
+     * @param key
+     * @param array
+     * @param name
+     */
+    containsAllArray: function (key, array, name) {
+      array = _.isArray(array) ? array : [array];
+      this._baseCondition(key, array, name, 'containsAllArray');
     },
-    notContainAllArray: function (key, value, name) {
-      this._baseCondition(key, value, name, 'notContainAllArray');
+    /**
+     * [数组属性]全部不包含
+     * @param key
+     * @param array
+     * @param name
+     */
+    notContainAllArray: function (key, array, name) {
+      array = _.isArray(array) ? array : [array];
+      this._baseCondition(key, array, name, 'notContainAllArray');
     },
-    containsInArray: function (key, value, name) {
-      this._baseCondition(key, value, name, 'containsInArray');
+    /**
+     * [数组属性]包含指定元素
+     * @param key
+     * @param array
+     * @param name
+     */
+    containsInArray: function (key, array, name) {
+      array = _.isArray(array) ? array : [array];
+      this._baseCondition(key, array, name, 'containsInArray');
     },
-    notContainInArray: function (key, value, name) {
-      this._baseCondition(key, value, name, 'notContainInArray');
+    /**
+     * [数组属性]不包含指定元素
+     * @param key
+     * @param array
+     * @param name
+     */
+    notContainInArray: function (key, array, name) {
+      array = _.isArray(array) ? array : [array];
+      this._baseCondition(key, array, name, 'notContainInArray');
     },
-    containedByArray: function (key, value, name) {
-      this._baseCondition(key, value, name, 'containedByArray');
+    /**
+     * [数组属性]被包含指定元素
+     * @param key
+     * @param array
+     * @param name
+     */
+    containedByArray: function (key, array, name) {
+      array = _.isArray(array) ? array : [array];
+      this._baseCondition(key, array, name, 'containedByArray');
     },
-    overlapInArray: function (key, value, name) {
-      this._baseCondition(key, value, name, 'overlapInArray');
+    /**
+     * [数组属性]与指定元素有重叠
+     * @param key
+     * @param array
+     * @param name
+     */
+    overlapInArray: function (key, array, name) {
+      array = _.isArray(array) ? array : [array];
+      this._baseCondition(key, array, name, 'overlapInArray');
     },
-    //*****JSON类型判断
+    //*************************************JSON类型判断
+    //*************************************
+    /**
+     * [JSON属性]元素相等
+     * @param key
+     * @param jsonKey
+     * @param jsonValue
+     * @param name
+     */
     equalInJson: function (key, jsonKey, jsonValue, name) {
       this._jsonCondition(key, jsonKey, jsonValue, name, 'equalInJson');
     },
+    /**
+     * [JSON属性]元素不相等
+     * @param key
+     * @param jsonKey
+     * @param jsonValue
+     * @param name
+     */
     notEqualInJson: function (key, jsonKey, jsonValue, name) {
       this._jsonCondition(key, jsonKey, jsonValue, name, 'notEqualInJson');
     },
+    /**
+     * [JSON属性]元素大于
+     * @param key
+     * @param jsonKey
+     * @param jsonValue
+     * @param name
+     */
     greaterThanInJson: function (key, jsonKey, jsonValue, name) {
       this._jsonCondition(key, jsonKey, jsonValue, name, 'greaterThanInJson');
     },
+    /**
+     * [JSON属性]元素大于等于
+     * @param key
+     * @param jsonKey
+     * @param jsonValue
+     * @param name
+     */
     greaterThanOrEqualInJson: function (key, jsonKey, jsonValue, name) {
       this._jsonCondition(key, jsonKey, jsonValue, name, 'greaterThanOrEqualInJson');
     },
+    /**
+     * [JSON属性]元素小于
+     * @param key
+     * @param jsonKey
+     * @param jsonValue
+     * @param name
+     */
     lessThanInJson: function (key, jsonKey, jsonValue, name) {
       this._jsonCondition(key, jsonKey, jsonValue, name, 'lessThanInJson');
     },
+    /**
+     * [JSON属性]元素小于等于
+     * @param key
+     * @param jsonKey
+     * @param jsonValue
+     * @param name
+     */
     lessThanOrEqualInJson: function (key, jsonKey, jsonValue, name) {
       this._jsonCondition(key, jsonKey, jsonValue, name, 'lessThanOrEqualInJson');
     },
+    /**
+     * [JSON属性]存在某个key
+     * @param key
+     * @param value
+     * @param name
+     */
     existKeyInJson: function (key, value, name) {
       this._baseCondition(key, value, name, 'existKeyInJson');
     },
-    existAnyKeysInJson: function (key, value, name) {
-      this._baseCondition(key, value, name, 'existAnyKeysInJson');
+    /**
+     * [JSON属性]存在多个key中的任意一个
+     * @param key
+     * @param array
+     * @param name
+     */
+    existAnyKeysInJson: function (key, array, name) {
+      array = _.isArray(array) ? array : [array];
+      this._baseCondition(key, array, name, 'existAnyKeysInJson');
     },
-    existAllKeysInJson: function (key, value, name) {
-      this._baseCondition(key, value, name, 'existAllKeysInJson');
+    /**
+     * [JSON属性]存在指定的全部key
+     * @param key
+     * @param array
+     * @param name
+     */
+    existAllKeysInJson: function (key, array, name) {
+      array = _.isArray(array) ? array : [array];
+      this._baseCondition(key, array, name, 'existAllKeysInJson');
     },
-    containsInJson: function (key, value, name) {
-      this._baseCondition(key, value, name, 'containsInJson');
+    /**
+     * [JSON属性]包含指定对象
+     * @param key
+     * @param object
+     * @param name
+     */
+    containsInJson: function (key, object, name) {
+      this._baseCondition(key, object, name, 'lessThanOrEqualInJson')
     },
-    containedByJson: function (key, value, name) {
-      this._baseCondition(key, value, name, 'containedByJson');
+    /**
+     * [JSON属性]被包含指定对象
+     * @param key
+     * @param object
+     * @param name
+     */
+    containedByJson: function (key, object, name) {
+      this._baseCondition(key, object, name, 'lessThanOrEqualInJson')
     },
-    //*****其它
+    //*************************************其它
+    //*************************************
+    /**
+     * 属性值存在
+     * @param key
+     * @param name
+     */
     exist: function (key, name) {
       this._queryOptions.conditionCollection.push({
         name: name || '',
@@ -226,6 +419,11 @@ module.exports = function (CB) {
         type: 'exist'
       });
     },
+    /**
+     * 属性值不存在
+     * @param key
+     * @param name
+     */
     notExist: function (key, name) {
       this._queryOptions.conditionCollection.push({
         name: name || '',

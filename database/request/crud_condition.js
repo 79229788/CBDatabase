@@ -4,6 +4,10 @@ module.exports = function (className, object) {
     //****************************************基本类型
     case 'equal':
       return `"${className}"."${object.key}" = '${object.value}'`;
+    case 'equals':
+      return `"${className}"."${object.key}" = ANY(VALUES ${object.value.map((item) => {
+        return `('${item}')`
+      }).join(',')})`;
     case 'notEqual':
       return `"${className}"."${object.key}" != '${object.value}'`;
     case 'greaterThan':
@@ -29,11 +33,9 @@ module.exports = function (className, object) {
       return `"${className}"."${object.key}" = '${object.value}'`;
     //包含数组元素
     case 'containsInArray':
-    case 'containsInJson':
       return `"${className}"."${object.key}" @> '${object.value}'`;
     //数组元素被包含
     case 'containedByArray':
-    case 'containedByJson':
       return `"${className}"."${object.key}" <@ '${object.value}'`;
     //数组元素有重叠
     case 'overlapInArray':
@@ -70,6 +72,10 @@ module.exports = function (className, object) {
     //JSON中是否存在指定的全部key
     case 'existAllKeysInJson':
       return `"${className}"."${object.key}" ?& '${object.value}'`;
+    case 'containsInJson':
+      return `"${className}"."${object.key}" @> '${object.value}'`;
+    case 'containedByJson':
+      return `"${className}"."${object.key}" <@ '${object.value}'`;
 
     //**************************************************
     //****************************************其它
