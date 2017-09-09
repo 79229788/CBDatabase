@@ -118,7 +118,6 @@ module.exports = function (CB) {
   const handleServerData = (rows, className) => {
     rows.forEach((row) => {
       mergeChildren(row);
-      console.log(row.priceMap);
       compatibleDataType(row, className);
     });
   };
