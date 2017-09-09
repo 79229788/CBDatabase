@@ -34,21 +34,41 @@ const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
-const query = new CB.Query(ProductPriceLevel);
-query.equalTo('objectId', ['B1ZFkWNZq-', 'SkxYy-Eb5b']);
-query.find().then(function (data) {
+const query = new CB.Query(Product);
+query.include('cate', ProductCate);
+query.include('subCate', ProductCate);
+query.include('priceMap', ProductPriceMap);
+query.includeArray('priceMap.levels', ProductPriceLevel);
+query.includeArray('priceMap.alones', ProductPriceAlone);
+query.get('HyHKkbEZcb').then(function (data) {
   console.log(data);
 }).catch(function (error) {
   console.log(error);
 });
 
-// const cate = new ProductCate();
-// cate.set('name', '分类一');
-// cate.save();
+
+
 //
-// const company = new Company();
-// company.set('name', '奥兜科技');
-// company.save();
+// const cate3 = new ProductCate();
+// cate3.set('name', '分类3');
+// cate3.save();
+//
+// const cate4 = new ProductCate();
+// cate4.set('name', '分类4');
+// cate4.save();
+
+//
+// const company1 = new Company();
+// company1.set('name', '公司一');
+// company1.save();
+//
+// const company2 = new Company();
+// company2.set('name', '公司二');
+// company2.save();
+//
+// const company3 = new Company();
+// company3.set('name', '公司三');
+// company3.save();
 
 
 // CB.Cloud.Transaction(async (client) => {

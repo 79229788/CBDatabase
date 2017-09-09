@@ -363,11 +363,20 @@ module.exports = function (CB) {
    * @return {Promise.<Array>}
    */
   CB.Object.destroyAll = async function (list, client) {
-    const destroyedModels = [];
-    for(let model of _.flattenDeep(list)) {
-      if(model) destroyedModels.push(await model.destroy(null, client));
+    const flattenModels = _.flattenDeep(list);
+    const groupModels = _.groupBy(flattenModels, item => item.className);
+    for(let className of Object.keys(groupModels)) {
+      const items = groupModels[className];
+      if(items.length > 1) {
+        await CB.crud.delete(className, {
+          'objectId:batch': items.map(item => item.id)
+        }, client);
+      }else if(items.length === 1) {
+        await CB.crud.delete(className, {
+          'objectId': items[0].id
+        }, client);
+      }
     }
-    return destroyedModels;
   };
   /**
    * 深度查找未保存的子项

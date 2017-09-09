@@ -28,6 +28,7 @@ module.exports.tables = [
       {name: 'createdAt', type: 'character(19)'},
       {name: 'updatedAt', type: 'character(19)'},
       {name: 'cate', type: 'pointer'},
+      {name: 'subCate', type: 'pointer'},
       {name: 'name', type: 'text'},
       {name: 'priceMap', type: 'pointer'},
     ]

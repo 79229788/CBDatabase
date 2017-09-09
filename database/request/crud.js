@@ -177,38 +177,41 @@ module.exports = function (CB) {
         isExistJointArray = !!_.find(opts.includeCollection, {type: 'array'});
         if(isExistJointArray) joinsGroupClause = `GROUP BY "${className}"."objectId"`;
         _.each(opts.includeCollection, (object) => {
-          let _className = className, _tailKey = object.key;
+          let _className = className, _tailKey = object.key.replace(/^\^/, '');
           if(object.key.indexOf('.') > -1) {
             const arr = object.key.split('.');
             if(arr.length > 5) throw new Error('[DATABASE FIND ERROR] - include查询最多仅支持5层嵌套，请规范使用！');
             const prev = _.clone(arr);prev.pop();
             _className = _.find(opts.includeCollection, {key: prev.join('.')}).className;
-            _tailKey = arr[arr.length - 1];
+            _tailKey = arr[arr.length - 1].replace(/^\^/, '');
           }
+          const joinClassOrigin = object.className; //连接表的原名
+          const joinClassAlias = object.className = `${joinClassOrigin}_${_tailKey}_alias`; //连接表设置别名(防止不重复)
           if(object.type === 'array') {
             joinsSelectClause += `
-              ,CASE WHEN COUNT("${object.className}") = 0 THEN '[]' ELSE JSON_AGG(TO_JSON("${object.className}")) END AS "${object.key}"
+              ,CASE WHEN COUNT("${joinClassAlias}") = 0 THEN '[]' ELSE JSON_AGG(TO_JSON("${joinClassAlias}")) END AS "${object.key}"
             `;
             joinsRelationClause += `
-              LEFT JOIN LATERAL UNNEST("${_className}"."${_tailKey.replace(/^\^/, '')}") "${_className}${_tailKey.replace(/^\^/, '')}" ON true
-              LEFT JOIN "${object.className}" ON "${_className}${_tailKey.replace(/^\^/, '')}" ->> 'objectId' = "${object.className}"."objectId"
+              LEFT JOIN LATERAL UNNEST("${_className}"."${_tailKey}") "${_className}_${_tailKey}_iterator" ON true
+              LEFT JOIN "${joinClassOrigin}" AS "${joinClassAlias}"
+              ON "${joinClassAlias}"."objectId" = "${_className}_${_tailKey}_iterator" ->> 'objectId'
             `;
           }else {
             if(isExistJointArray) {
               joinsSelectClause += `
-                ,JSON_AGG(TO_JSON("${object.className}")) -> 0 AS "${object.key}"
+                ,JSON_AGG(TO_JSON("${joinClassAlias}")) -> 0 AS "${object.key}"
               `;
               joinsGroupClause += `
-                ,"${object.className}"."objectId"
+                ,"${joinClassAlias}"."objectId"
               `;
             }else {
               joinsSelectClause += `
-                ,ROW_TO_JSON("${object.className}") AS "${object.key}"
+                ,ROW_TO_JSON("${joinClassAlias}") AS "${object.key}"
               `;
             }
             joinsRelationClause += `
-              LEFT JOIN "${object.className}"
-              ON "${object.className}"."objectId" = "${_className}"."${_tailKey.replace(/^\^/, '')}" ->> 'objectId'
+              LEFT JOIN "${joinClassOrigin}" AS "${joinClassAlias}"
+              ON "${joinClassAlias}"."objectId" = "${_className}"."${_tailKey}" ->> 'objectId'
             `;
           }
         });
@@ -527,12 +530,28 @@ module.exports = function (CB) {
           ${
             _.map(condition, (value, key) => {
               index++;
+              if(key.indexOf(':batch') > 0) {
+                return `"${key.replace(':batch', '')}" = ANY(VALUES ${value.map(() => {
+                  const item = `($${index})`;
+                  index++;
+                  return item;
+                }).join(',')})`;
+              }
               return `"${key}" = $${index}`;
             }).join(',')
           } 
       `;
       printSql(spl, className, 'delete');
-      const params = _.values(condition);
+      const params = [];
+      _.each(condition, (value, key) => {
+        if(key.indexOf(':batch') > 0) {
+          value.forEach((item) => {
+            params.push(item);
+          });
+        }else {
+          params.push(value);
+        }
+      });
       const _client = client || await CB.pg.connect();
       try {
         await _client.query(spl, params);
