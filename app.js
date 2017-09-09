@@ -52,7 +52,7 @@ const product = new Product();
 product.set('name', '测试');
 product.set('cate', cate);
 
-console.log(product.toOrigin());
+console.log(product);
 
 
 // CB.Cloud.Transaction(async (client) => {
