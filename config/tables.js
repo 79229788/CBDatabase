@@ -16,8 +16,8 @@ module.exports.tables = [
     name: 'Company',
     columns: [
       {name: 'objectId', type: 'text', isPrimary: true},
-      {name: 'createdAt', type: 'date'},
-      {name: 'updatedAt', type: 'date'},
+      {name: 'createdAt', type: 'character(19)'},
+      {name: 'updatedAt', type: 'character(19)'},
       {name: 'name', type: 'text'},
     ]
   },
@@ -25,8 +25,8 @@ module.exports.tables = [
     name: 'Product',
     columns: [
       {name: 'objectId', type: 'text', isPrimary: true},
-      {name: 'createdAt', type: 'date'},
-      {name: 'updatedAt', type: 'date'},
+      {name: 'createdAt', type: 'character(19)'},
+      {name: 'updatedAt', type: 'character(19)'},
       {name: 'cate', type: 'pointer'},
       {name: 'name', type: 'text'},
       {name: 'priceMap', type: 'pointer'},
@@ -36,8 +36,8 @@ module.exports.tables = [
     name: 'ProductCate',
     columns: [
       {name: 'objectId', type: 'text', isPrimary: true},
-      {name: 'createdAt', type: 'date'},
-      {name: 'updatedAt', type: 'date'},
+      {name: 'createdAt', type: 'character(19)'},
+      {name: 'updatedAt', type: 'character(19)'},
       {name: 'name', type: 'text'},
     ]
   },
@@ -45,8 +45,8 @@ module.exports.tables = [
     name: 'ProductPriceMap',
     columns: [
       {name: 'objectId', type: 'text', isPrimary: true},
-      {name: 'createdAt', type: 'date'},
-      {name: 'updatedAt', type: 'date'},
+      {name: 'createdAt', type: 'character(19)'},
+      {name: 'updatedAt', type: 'character(19)'},
       {name: 'company', type: 'pointer'},
       {name: 'levels', type: 'pointer[]'},
       {name: 'alones', type: 'pointer[]'},
@@ -56,8 +56,8 @@ module.exports.tables = [
     name: 'ProductPriceLevel',
     columns: [
       {name: 'objectId', type: 'text', isPrimary: true},
-      {name: 'createdAt', type: 'date'},
-      {name: 'updatedAt', type: 'date'},
+      {name: 'createdAt', type: 'character(19)'},
+      {name: 'updatedAt', type: 'character(19)'},
       {name: 'name', type: 'text'},
       {name: 'icon', type: 'file'},
     ]
@@ -66,8 +66,8 @@ module.exports.tables = [
     name: 'ProductPriceAlone',
     columns: [
       {name: 'objectId', type: 'text', isPrimary: true},
-      {name: 'createdAt', type: 'date'},
-      {name: 'updatedAt', type: 'date'},
+      {name: 'createdAt', type: 'character(19)'},
+      {name: 'updatedAt', type: 'character(19)'},
       {name: 'name', type: 'text'},
     ]
   },

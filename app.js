@@ -34,30 +34,34 @@ const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
-// const query = new CB.Query(Product);
-// query.include('priceMap', ProductPriceMap);
-// query.include('priceMap.company', Company);
-// query.includeArray('priceMap.levels', ProductPriceLevel);
-// query.get('ByBEfoQl9Z').then(function (data) {
-//   console.log(data.toOrigin());
-// }).catch(function (error) {
-//   console.log(error);
-// });
+const query = new CB.Query(Product);
+query.include('priceMap', ProductPriceMap);
+query.include('priceMap.company', Company);
+query.includeArray('priceMap.levels', ProductPriceLevel);
+query.includeArray('priceMap.alones', ProductPriceAlone);
+query.get('HyHKkbEZcb').then(function (data) {
+  //console.log(data.get('priceMap').get('company').toOrigin());
+  //console.log(data.get('priceMap').get('levels').map(item => item.toOrigin()));
+  //console.log(data.get('priceMap').get('alones').map(item => item.toOrigin()));
+}).catch(function (error) {
+  console.log(error);
+});
 
-const cate = new ProductCate();
-cate.id = 'B1YNCcJqb';
-
-
-const product = new Product();
-product.set('name', '测试');
-product.set('cate', cate);
-
-console.log(product);
+// const cate = new ProductCate();
+// cate.set('name', '分类一');
+// cate.save();
+//
+// const company = new Company();
+// company.set('name', '奥兜科技');
+// company.save();
 
 
 // CB.Cloud.Transaction(async (client) => {
 //   const cate = new ProductCate();
-//   cate.id = 'B1YNCcJqb';
+//   cate.id = 'SJ6BRQW5W';
+//
+//   const company = new Company();
+//   company.id = 'BygpH07Zc-';
 //
 //   const file = CB.File.withURL('logo', '#');
 //
@@ -73,6 +77,7 @@ console.log(product);
 //   alone2.set('name', '独立二价格');
 //
 //   const priceMap = new ProductPriceMap();
+//   priceMap.set('company', company);
 //   priceMap.set('levels', [level1, level2]);
 //   priceMap.set('alones', [alone1, alone2]);
 //

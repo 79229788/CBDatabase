@@ -82,18 +82,14 @@ module.exports = function (CB) {
      * @param key 查询字段（支持5层嵌套，嵌套连接请使用"."）
      * 例如：product.cate.levels，该类型只能作为最后一层出现
      * @param objectClass
-     * @param orderKey 字段
-     * @param orderBy 字段
      */
-    includeArray: function (key, objectClass, orderKey = 'createdAt', orderBy = 'asc') {
+    includeArray: function (key, objectClass) {
       if(!objectClass) throw new Error('[CB.Query] include方法，必须设置第二个参数(objectClass)');
       const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
       this._queryOptions.includeCollection.push({
         key: '^' + key,
         type: 'array',
         className: className,
-        orderKey: orderKey,
-        orderBy: orderBy
       });
     },
     /**

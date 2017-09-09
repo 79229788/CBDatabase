@@ -243,21 +243,17 @@ module.exports = function (CB) {
         }
         this.id = shortId.generate();
         const ossCloud = await CB.oss.uploadBuffer(`${this.id}${this._extName}`, data);
+        if(!ossCloud.url) throw new Error('Upload successful, but unknown reason can not get url');
         this.set('url', ossCloud.url);
         this.set('provider', 'oss');
-        const unsaved = this.toOrigin();
-        unsaved['objectId:override'] = unsaved.objectId;
-        delete unsaved.__type;
-        delete unsaved.className;
-        delete unsaved.objectId;
-        await CB.crud.save('_File', unsaved, client);
-        if(!ossCloud.url) throw new Error('Upload successful, but unknown reason can not get url');
-        return this;
-      }else {
-        const cbCloud = await CB.crud.save('_File', this.toOrigin(), client);
-        this.id = cbCloud.objectId;
-        return this;
       }
+      const unsaved = this.toOrigin();
+      delete unsaved.__type;
+      delete unsaved.className;
+      delete unsaved.objectId;
+      const saved = await CB.crud.save('_File', unsaved, client);
+      this.id = saved.objectId;
+      return this;
     },
   };
 

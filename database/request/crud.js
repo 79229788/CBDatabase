@@ -32,7 +32,9 @@ module.exports = function (CB) {
     //进行合并
     function merge(oldItem, newItem) {
       if(_.isArray(oldItem)) {
-        oldItem = oldItem.map((item, index) => _.extend(item, newItem[index]));
+        oldItem = oldItem.map((item) => {
+          return _.extend(item, _.find(newItem, {objectId: item.objectId}));
+        });
       }
       _.extend(oldItem, newItem);
     }
@@ -116,6 +118,7 @@ module.exports = function (CB) {
   const handleServerData = (rows, className) => {
     rows.forEach((row) => {
       mergeChildren(row);
+      console.log(row.priceMap);
       compatibleDataType(row, className);
     });
   };
@@ -185,7 +188,7 @@ module.exports = function (CB) {
           }
           if(object.type === 'array') {
             joinsSelectClause += `
-              ,CASE WHEN COUNT("${object.className}") = 0 THEN '[]' ELSE JSON_AGG(TO_JSON("${object.className}") ORDER BY "${object.className}"."${object.orderKey}" ${object.orderBy}) END AS "${object.key}"
+              ,CASE WHEN COUNT("${object.className}") = 0 THEN '[]' ELSE JSON_AGG(TO_JSON("${object.className}")) END AS "${object.key}"
             `;
             joinsRelationClause += `
               LEFT JOIN LATERAL UNNEST("${_className}"."${_tailKey.replace(/^\^/, '')}") "${_className}${_tailKey.replace(/^\^/, '')}" ON true
