@@ -383,7 +383,7 @@ module.exports = function (CB) {
       if(value instanceof CB.Object) {
         if(value.isChanged()) children.push(value);
       }else if(value instanceof CB.File) {
-        if(!value.getUrl() && !value.id) files.push(value);
+        if(!value.id) files.push(value);
       }
     });
   };
@@ -399,7 +399,7 @@ module.exports = function (CB) {
     for(let key of Object.keys(children)) {
       const childModels = children[key];
       for(child of childModels) {
-        if(child instanceof CB.File && !child.getUrl() && !child.id) {
+        if(child instanceof CB.File && !child.id) {
           await child.save(client);
         }else {
           if(child.isChanged()) {

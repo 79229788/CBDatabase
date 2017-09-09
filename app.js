@@ -34,15 +34,25 @@ const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
-const query = new CB.Query(Product);
-query.include('priceMap', ProductPriceMap);
-query.include('priceMap.company', Company);
-query.includeArray('priceMap.levels', ProductPriceLevel);
-query.get('ByBEfoQl9Z').then(function (data) {
-  console.log(data.toOrigin());
-}).catch(function (error) {
-  console.log(error);
-});
+// const query = new CB.Query(Product);
+// query.include('priceMap', ProductPriceMap);
+// query.include('priceMap.company', Company);
+// query.includeArray('priceMap.levels', ProductPriceLevel);
+// query.get('ByBEfoQl9Z').then(function (data) {
+//   console.log(data.toOrigin());
+// }).catch(function (error) {
+//   console.log(error);
+// });
+
+const cate = new ProductCate();
+cate.id = 'B1YNCcJqb';
+
+
+const product = new Product();
+product.set('name', '测试');
+product.set('cate', cate);
+
+console.log(product.toOrigin());
 
 
 // CB.Cloud.Transaction(async (client) => {

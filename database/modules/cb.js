@@ -137,9 +137,7 @@ CB._decode = function (object) {
   if(_.isDate(object)) return CB._parseDate(object);
   if(_.isArray(object)) return _.map(object, child => CB._decode(child));
   if(object instanceof CB.Object || object instanceof CB.File) {
-    const origin = object._type && object._className
-      ? _.extend(object.getPointer(), object.attributes)
-      : _.extend({}, object.attributes);
+    const origin = _.extend(object.getPointer(), object.attributes);
     if(object.id) {
       origin.objectId = object.id;
     }else {
