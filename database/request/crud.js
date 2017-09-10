@@ -410,8 +410,9 @@ module.exports = function (CB) {
       }).join(',')})
         ${returningClause}
       `;
-      printSql(spl, className, 'insert');
       const params = _.values(object);
+      printSql(spl, className, 'insert');
+      printSqlParams(params, className, 'insert');
       const _client = client || await CB.pg.connect();
       try {
         const result = await _client.query(spl, params);
@@ -495,8 +496,9 @@ module.exports = function (CB) {
         }
         ${returningClause}
       `;
-      printSql(spl, className, 'update');
       const params = _.values(tmpObject).concat(_.values(condition));
+      printSql(spl, className, 'update');
+      printSqlParams(params, className, 'update');
       const _client = client || await CB.pg.connect();
       try {
         const result = await _client.query(spl, params);
@@ -544,7 +546,6 @@ module.exports = function (CB) {
         }).join(',')
         } 
       `;
-      printSql(spl, className, 'delete');
       const params = [];
       _.each(condition, (value, key) => {
         if(key.indexOf(':batch') > 0) {
@@ -555,6 +556,8 @@ module.exports = function (CB) {
           params.push(value);
         }
       });
+      printSql(spl, className, 'delete');
+      printSqlParams(params, className, 'delete');
       const _client = client || await CB.pg.connect();
       try {
         await _client.query(spl, params);
@@ -579,6 +582,17 @@ module.exports = function (CB) {
       sql = sql.replace(/\s*,/g, ',\n ');
       sql = sql.replace(/ {2,}/g, ' ');
       console.log(sql);
+    }
+  }
+  /**
+   * 打印SQL参数
+   * @param className
+   * @param params
+   * @param type
+   */
+  function printSqlParams(params, className, type) {
+    if(CB.pgConfig.printSqlParams) {
+      console.log(`↓[Database ${type} class ${className}: ${moment().format('YYYY-MM-DD HH:mm:ss')}]\n`, params);
     }
   }
 };

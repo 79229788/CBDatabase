@@ -53,6 +53,10 @@ module.exports = function (className, object) {
     //JSON中的基础运算符判断
     case 'equalInJson':
       return `"${className}"."${object.key}" ->> '${object.jsonKey}' = '${object.jsonValue}'`;
+    case 'equalsInJson':
+      return `"${className}"."${object.key}" ->> '${object.jsonKey}' = ANY(VALUES ${object.jsonValue.map((item) => {
+        return `('${item.id}')`
+      }).join(',')})`;
     case 'notEqualInJson':
       return `"${className}"."${object.key}" ->> '${object.jsonKey}' != '${object.jsonValue}'`;
     case 'greaterThanInJson':

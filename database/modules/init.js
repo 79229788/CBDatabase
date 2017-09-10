@@ -18,6 +18,7 @@ CB.initPG = function (config) {
     password : '',
     database : 'web',
     printSql : false,
+    printSqlParams : false,
     tableList: [],
   }, config || {});
   CB.pg = new PG.Pool(CB.pgConfig);

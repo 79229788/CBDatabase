@@ -150,6 +150,9 @@ module.exports = function (CB) {
         return this._jsonCondition(key, 'objectId', value.id, name, 'equalInJson');
       }
       if(_.isArray(value)) {
+        if(value[0] instanceof CB.Object || value[0] instanceof CB.File) {
+          return this._jsonCondition(key, 'objectId', value, name, 'equalsInJson');
+        }
         return this._baseCondition(key, value, name, 'equals');
       }
       this._baseCondition(key, value, name, 'equal');
