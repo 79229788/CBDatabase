@@ -1,5 +1,4 @@
 const _ = require('lodash');
-const shortId = require('shortid');
 const utils = require('../utils');
 const RESERVED_KEYS = ['objectId', 'createdAt', 'updatedAt'];
 const checkReservedKey = function checkReservedKey(key) {
@@ -172,20 +171,13 @@ module.exports = function (CB) {
       return this;
     },
     /**
-     * 设置关系属性
-     * @param key
-     * @param objectClass
-     * @param relationId
-     * @return {CB}
+     * 创建一个Relation实例
+     * @param parentClass Relation的父类(继承类)
+     * @param _relationId (可选)自定义子类id
+     * @return {Relation}
      */
-    setRelation: function (key, objectClass, relationId) {
-      const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
-      relationId  = relationId ? relationId : shortId.generate();
-      const relation = new CB.Relation(this, key);
-      relation.className = className;
-      relation.relationId = relationId;
-      this.set(key, relation);
-      return relation;
+    createRelation: function (parentClass, _relationId) {
+      return new CB.Relation(parentClass, _relationId, null);
     },
     /**
      * 获取关系表
@@ -194,13 +186,9 @@ module.exports = function (CB) {
      */
     getRelation: function (attr) {
       const value = this.get(attr);
-      if(value) {
-        if(!(value instanceof CB.Relation)) throw new Error("Called getRelation() on non-relation field " + attr);
-        value.parent = this;
-        return value;
-      } else {
-        return new CB.Relation(this, attr);
-      }
+      if(!value || !(value instanceof CB.Relation)) throw new Error("Called getRelation() on non-relation field " + attr);
+      value.parent = this;
+      return value;
     },
     /**
      * 克隆模型
@@ -411,35 +399,16 @@ module.exports = function (CB) {
         if(child instanceof CB.File && !child.id) {
           await child.save(client);
         }else if(child instanceof CB.Object && child.isChanged()) {
-          const relations = child.get('__relations');
           const saveObject = child._toSaveOrigin();
-          delete saveObject.__relations;
           const savedData = await CB.crud.save(child.className, saveObject, client);
           CB.Object._assignSavedData(savedData, child);
-          await saveRelations(relations);
         }
       }
     }
     //***再保存当前模型
-    const relations = model.get('__relations');
     const saveObject = model._toSaveOrigin();
-    delete saveObject.__relations;
     const savedData = await CB.crud.save(model.className, saveObject, client);
     CB.Object._assignSavedData(savedData, model);
-    await saveRelations(relations);
-    //***保存所有relation
-    async function saveRelations(relations) {
-      if(!_.isArray(relations)) return;
-      for(let item of relations) {
-        await CB.table.createChildTable('public', item.parentClassName, item.className, [
-          {name: 'objectId', type: 'text', isPrimary: true},
-        ], client);
-        for(let model of item.data) {
-          model._className = item.className;
-          await CB.Object._deepSaveAsync(model, client);
-        }
-      }
-    }
     return model;
   };
   /**
@@ -458,6 +427,15 @@ module.exports = function (CB) {
         delete model.attributes[key];
       }
     });
+  };
+  /**
+   * 获取关系表ClassName
+   * @param relationId
+   * @return {string}
+   */
+  CB.Object.relationClass = function (relationId) {
+    if(!relationId) throw new Error('调用relationClass方法，参数relationId不允许为空！');
+    return this.prototype.className + '@_@' + relationId;
   };
 
 

@@ -46,8 +46,8 @@ module.exports = function (tableList) {
       }
       const deletedTables = _.difference(curTables, cfgTables);
       if(deletedTables.length > 0) {
-        deletedTables.forEach((item) => {
-          console.log(`[check database table] The local configuration [${item}] table has been deleted, but the cloud is still exist`);
+        deletedTables.forEach((name) => {
+          if(name.indexOf('@_@') < 0) console.log(`[check database table] The local configuration [${name}] table has been deleted, but the cloud is still exist`);
         });
       }
       console.log('[check database table] check completion!');

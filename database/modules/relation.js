@@ -1,13 +1,20 @@
 const _ = require('lodash');
+const shortId = require('shortid');
 
 module.exports = function (CB) {
 
-  CB.Relation = function (parent, key) {
-    if(!_.isString(key)) throw new TypeError('[Relation error] key must be a string');
-    this.parent = parent;
-    this.key = key;
-    this.className = '';
-    this.relationId = '';
+  /**
+   * Relation
+   * @param className   关系父类
+   * @param relationId  关系ID
+   * @param key         查询Key
+   * @constructor
+   */
+  CB.Relation = function (className, relationId, key) {
+    className = _.isString(className) ? className : className.prototype.className;
+    this.className = className;
+    this.relationId = relationId || shortId.generate();
+    this.key = key || '';
   };
 
   CB.Relation.prototype = {
@@ -34,33 +41,47 @@ module.exports = function (CB) {
         '__type': 'Relation',
         'className': this.className,
         'relationId': this.relationId,
+        'key': this.key,
       };
     },
     /**
      * 保存对象
      * @param objects
+     * @param client
+     * @return {Promise.<Array>}
      */
-    save: function (objects) {
+    save: async function (objects, client) {
       objects = _.isArray(objects) ? objects : [objects];
       for(let model of objects) {
         if(model.className !== this.className) {
-          throw new Error(`[Relation error] All the elements of '${this.key}' must be instances of ${this.className}`);
+          throw new Error(`[Relation error] The instance of the saved element does not match the specified [${this.className}]！`);
         }
       }
-      const relations = this.parent.get('__relations') || [];
-      relations.push({
-        parentClassName: this.className,
-        className: `${this.className}_${this.relationId}`,
-        data: objects
-      });
-      this.parent.set('__relations', relations);
+      const parentClassName = this.className;
+      const relationClassName = `${this.className}@_@${this.relationId}`;
+      await CB.table.createChildTable('public', parentClassName, relationClassName, [
+        {name: 'objectId', type: 'text', isPrimary: true},
+        {name: '__key', type: 'text'},
+      ], client);
+      this.key = shortId.generate();
+      const unsavedModels = [];
+      for(let model of objects) {
+        model._className = relationClassName;
+        model.set('__key', this.key);
+        await CB.Object._deepSaveAsync(model, client);
+        unsavedModels.push(model);
+      }
+      return unsavedModels;
     },
     /**
      * 获取查询实例
      */
     query: function () {
-      if(!this.className || !this.relationId) throw new Error('[Relation error] className or relationId not find');
-      return new CB.Query(`${this.className}_${this.relationId}`);
+      if(!this.className || !this.relationId) throw new Error('[Relation error] the className or relationId not find');
+      if(!this.key) throw new Error(`[Relation error] the key not find！`);
+      const query = new CB.Query(`${this.className}@_@${this.relationId}`);
+      query.equalTo('__key', this.key);
+      return query;
     },
   };
 

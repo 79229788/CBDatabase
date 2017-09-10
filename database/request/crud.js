@@ -67,7 +67,7 @@ module.exports = function (CB) {
     const objectColumns = [];
     const stringColumns = [];
     CB.pgConfig.tableList.forEach(table => {
-      if(table.name === className) {
+      if(table.name === className.split('@_@')[0]) {
         for(let column of table.columns) {
           if(selectItems.length > 0 && selectItems.indexOf(column) < 0) continue;
           if(column.type === 'money'

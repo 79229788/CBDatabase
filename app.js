@@ -35,8 +35,8 @@ const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
 const query = new CB.Query(Product);
-query.select('name');
-// query.include('cate', ProductCate);
+query.include('cate', ProductCate);
+
 // query.include('subCate', ProductCate);
 // query.include('priceMap', ProductPriceMap);
 // query.includeArray('priceMap.levels', ProductPriceLevel);

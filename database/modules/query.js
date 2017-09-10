@@ -48,6 +48,7 @@ module.exports = function (CB) {
   CB.InnerQuery = function (objectClass) {
     this.className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
     this._queryOptions = {
+      includeCollection: [],
       conditionCollection: [],
       conditionJoins: '',
       orderCollection: [],
@@ -60,7 +61,7 @@ module.exports = function (CB) {
      * @param keys
      */
     select: function (...keys) {
-      this._queryOptions.selectCollection.push(keys);
+      this._queryOptions.selectCollection.push(_.flatten(keys));
     },
     /**
      * 内嵌查询[内嵌的是独立对象][简易版：会完整返回嵌套的子类数据]
@@ -105,7 +106,7 @@ module.exports = function (CB) {
      * 例如：product.cate.user，不支持array类型的嵌套查询！
      * @param object CBObject
      */
-    matchesQuery: function (key, object) {
+    includeQuery: function (key, object) {
       _.remove(this._queryOptions.includeCollection, item => item.key === key);
       if(!(object instanceof CB.InnerQuery)) throw new Error('[CB.Query] matchesQuery方法，查询对象必须使用CB.InnerQuery构建');
       this._queryOptions.includeCollection.push({
@@ -115,6 +116,13 @@ module.exports = function (CB) {
         conditionJoins: object._queryOptions.conditionJoins,
         conditionCollection: object._queryOptions.conditionCollection,
         orderCollection: object._queryOptions.orderCollection
+      });
+      object._queryOptions.includeCollection.forEach(item => {
+        this._queryOptions.includeCollection.push({
+          key: `^${key}.${item.key.replace(/^\^/, '')}`,
+          type: item.type,
+          className: item.className,
+        });
       });
     },
     //*****************条件判断集合 start
@@ -150,6 +158,9 @@ module.exports = function (CB) {
         return this._jsonCondition(key, 'objectId', value.id, name, 'equalInJson');
       }
       if(_.isArray(value)) {
+        if(value.length === 1) {
+          return this.equalTo(key, value[0], name);
+        }
         if(value[0] instanceof CB.Object || value[0] instanceof CB.File) {
           return this._jsonCondition(key, 'objectId', value, name, 'equalsInJson');
         }
@@ -496,6 +507,7 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     find: async function (client) {
+      checkQueryOptions(this._queryOptions);
       const data = await CB.crud.find(this.className, 'find', this._queryOptions, client);
       if(data.length === 0) return [];
       return data.map((item) => {
@@ -515,6 +527,7 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     first: async function (client) {
+      checkQueryOptions(this._queryOptions);
       const data = await CB.crud.find(this.className, 'first', this._queryOptions, client);
       if(!data) return null;
       if(this.isUserQuery) {
@@ -538,5 +551,25 @@ module.exports = function (CB) {
 
   CB.InnerQuery.prototype = _.clone(CB.Query.prototype);
   CB.UserQuery.prototype = _.clone(CB.Query.prototype);
+
+  /**
+   * 检查查询选项
+   */
+  function checkQueryOptions(options) {
+    const countMap = {};
+    for(let item of options.includeCollection){
+      const key = item.key.replace(/^\^/, '');
+      if(countMap[key]){
+        countMap[key] +=1;
+      }else{
+        countMap[key] = 1;
+      }
+    }
+    _.each(countMap, (value, key) => {
+      if(value > 1) {
+        throw new Error(`内嵌查询属性[${key}]存在重复(即重复使用了include或innerQuery)，请检查！`);
+      }
+    });
+  }
 
 };

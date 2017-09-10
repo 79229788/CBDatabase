@@ -82,7 +82,7 @@ CB._traverse = function (object, cb) {
   }
   if(_.isObject(object)) {
     _.each(object, function (child, key) {
-      const newChild = key === '__relations' ? child : CB._traverse(child, cb);
+      const newChild = CB._traverse(child, cb);
       if (newChild) object[key] = newChild;
     });
     return cb(object);
@@ -114,10 +114,7 @@ CB._encode = function (object, key) {
   }
   if(object.__type === 'Relation') {
     if(!key) throw new Error('key missing encoding a Relation');
-    const relation = new CB.Relation(null, key);
-    relation.className = object.className;
-    relation.relationId = object.relationId;
-    return relation;
+    return new CB.Relation(object.className, object.relationId, object.key);
   }
   if(object.__type === 'File') {
     const file = new CB.File(object.name);
