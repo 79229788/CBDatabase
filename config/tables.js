@@ -40,6 +40,7 @@ module.exports.tables = [
       {name: 'createdAt', type: 'character(19)'},
       {name: 'updatedAt', type: 'character(19)'},
       {name: 'name', type: 'text'},
+      {name: 'desc', type: 'text'},
     ]
   },
   {

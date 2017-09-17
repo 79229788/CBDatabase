@@ -9,6 +9,7 @@ module.exports = function (CB) {
   CB.Query = function (objectClass) {
     this.className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
     this._queryOptions = {
+      only: false,
       selectCollection: [],
       includeCollection: [],
       conditionCollection: [],
@@ -28,6 +29,7 @@ module.exports = function (CB) {
     this.isUserQuery = true;
     if(childClass) this.className = _.isString(childClass) ? childClass : childClass.prototype.className;
     this._queryOptions = {
+      only: false,
       selectCollection: [],
       includeCollection: [],
       conditionCollection: [],
@@ -47,6 +49,7 @@ module.exports = function (CB) {
    */
   CB.InnerQuery = function (objectClass) {
     this.className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+    this.isInnerQuery = true;
     this._queryOptions = {
       includeCollection: [],
       conditionCollection: [],
@@ -54,8 +57,61 @@ module.exports = function (CB) {
       orderCollection: [],
     };
   };
+  /**
+   * 联合查询
+   * @param objectClass
+   * @constructor
+   */
+  CB.UnionQuery = function (objectClass) {
+    this._queryOptions = {
+      className: _.isString(objectClass) ? objectClass : objectClass.prototype.className,
+      only: false,
+      selectCollection: [],
+      includeCollection: [],
+      conditionCollection: [],
+      conditionJoins: '',
+    };
+  };
+  /**
+   * 组合联合去重查询[合并为最终查询实例]
+   * @param unionQuerys
+   * @constructor
+   */
+  CB.UnionQueryAnd = function (...unionQuerys) {
+    const optionsCollection = unionQuerys.map(item => item._queryOptions);
+    this.isUnionQuery = true;
+    this._unionQueryOptions = {
+      queryOptionsCollection: optionsCollection,
+      isUnionAll: false,
+      orderCollection: [],
+      skip: 0,
+      limit: 1000,
+    };
+  };
+  /**
+   * 组合联合查询[合并为最终查询实例]
+   * @param unionQuerys
+   * @constructor
+   */
+  CB.UnionQueryAndAll = function (...unionQuerys) {
+    const optionsCollection = unionQuerys.map(item => item._queryOptions);
+    this.isUnionQuery = true;
+    this._unionQueryOptions = {
+      queryOptionsCollection: optionsCollection,
+      isUnionAll: true,
+      orderCollection: [],
+      skip: 0,
+      limit: 1000,
+    };
+  };
 
   CB.Query.prototype = {
+    /**
+     * 仅仅查询自己（仅仅在继承表中有作用）
+     */
+    own: function () {
+      this._queryOptions.only = true;
+    },
     /**
      * 查询指定列
      * @param keys
@@ -258,6 +314,9 @@ module.exports = function (CB) {
      */
     containsAllArray: function (key, array, name) {
       array = _.isArray(array) ? array : [array];
+      if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
+        array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
+      }
       this._baseCondition(key, array, name, 'containsAllArray');
     },
     /**
@@ -268,6 +327,9 @@ module.exports = function (CB) {
      */
     notContainAllArray: function (key, array, name) {
       array = _.isArray(array) ? array : [array];
+      if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
+        array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
+      }
       this._baseCondition(key, array, name, 'notContainAllArray');
     },
     /**
@@ -278,6 +340,9 @@ module.exports = function (CB) {
      */
     containsInArray: function (key, array, name) {
       array = _.isArray(array) ? array : [array];
+      if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
+        array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
+      }
       this._baseCondition(key, array, name, 'containsInArray');
     },
     /**
@@ -288,6 +353,9 @@ module.exports = function (CB) {
      */
     notContainInArray: function (key, array, name) {
       array = _.isArray(array) ? array : [array];
+      if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
+        array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
+      }
       this._baseCondition(key, array, name, 'notContainInArray');
     },
     /**
@@ -298,6 +366,9 @@ module.exports = function (CB) {
      */
     containedByArray: function (key, array, name) {
       array = _.isArray(array) ? array : [array];
+      if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
+        array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
+      }
       this._baseCondition(key, array, name, 'containedByArray');
     },
     /**
@@ -308,6 +379,9 @@ module.exports = function (CB) {
      */
     overlapInArray: function (key, array, name) {
       array = _.isArray(array) ? array : [array];
+      if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
+        array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
+      }
       this._baseCondition(key, array, name, 'overlapInArray');
     },
     //*************************************JSON类型判断
@@ -507,8 +581,14 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     find: async function (client) {
-      checkQueryOptions(this._queryOptions);
-      const data = await CB.crud.find(this.className, 'find', this._queryOptions, client);
+      if(this.isUnionQuery) {
+        this._unionQueryOptions.queryOptionsCollection.forEach(item => {
+          checkQueryOptions(item);
+        });
+      }else {
+        checkQueryOptions(this._queryOptions);
+      }
+      const data = await CB.crud.find(this.className, 'find', this._unionQueryOptions || this._queryOptions, client);
       if(data.length === 0) return [];
       return data.map((item) => {
         if(this.isUserQuery) {
@@ -527,8 +607,14 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     first: async function (client) {
-      checkQueryOptions(this._queryOptions);
-      const data = await CB.crud.find(this.className, 'first', this._queryOptions, client);
+      if(this.isUnionQuery) {
+        this._unionQueryOptions.queryOptionsCollection.forEach(item => {
+          checkQueryOptions(item);
+        });
+      }else {
+        checkQueryOptions(this._queryOptions);
+      }
+      const data = await CB.crud.find(this.className, 'first', this._unionQueryOptions || this._queryOptions, client);
       if(!data) return null;
       if(this.isUserQuery) {
         return new CB.User(_.extend(data, {
@@ -545,12 +631,15 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     count: async function (client) {
-      return await CB.crud.find(this.className, 'count', this._queryOptions, client);
+      return await CB.crud.find(this.className, 'count', this._unionQueryOptions || this._queryOptions, client);
     }
   };
 
-  CB.InnerQuery.prototype = _.clone(CB.Query.prototype);
   CB.UserQuery.prototype = _.clone(CB.Query.prototype);
+  CB.InnerQuery.prototype = _.clone(CB.Query.prototype);
+  CB.UnionQuery.prototype = _.clone(CB.Query.prototype);
+  CB.UnionQueryAnd.prototype = _.clone(CB.Query.prototype);
+  CB.UnionQueryAndAll.prototype = _.clone(CB.Query.prototype);
 
   /**
    * 检查查询选项

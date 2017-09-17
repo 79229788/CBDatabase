@@ -30,19 +30,19 @@ module.exports = function (className, object) {
     //****************************************数组类型
     //数组元素全包含
     case 'containsAllArray':
-      return `"${className}"."${object.key}" = '${object.value}'`;
+      return `"${className}"."${object.key}" = '{"${object.value.join('","')}"}'`;
     //包含数组元素
     case 'containsInArray':
-      return `"${className}"."${object.key}" @> '${object.value}'`;
+      return `"${className}"."${object.key}" @> '{"${object.value.join('","')}"}'`;
     //数组元素被包含
     case 'containedByArray':
-      return `"${className}"."${object.key}" <@ '${object.value}'`;
+      return `"${className}"."${object.key}" <@ '{"${object.value.join('","')}"}'`;
     //数组元素有重叠
     case 'overlapInArray':
-      return `"${className}"."${object.key}" && '${object.value}'`;
+      return `"${className}"."${object.key}" && '{"${object.value.join('","')}"}'`;
     //数组元素全不包含
     case 'notContainAllArray':
-      return `"${className}"."${object.key}" <> '${object.value}'`;
+      return `"${className}"."${object.key}" <> '{"${object.value.join('","')}"}'`;
     //数组元素不被包含
     case 'notContainInArray':
       return `NOT ('${object.value}' = ANY("${className}"."${object.key}"))`;

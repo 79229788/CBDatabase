@@ -136,6 +136,7 @@ module.exports = function (CB) {
      * @return {Promise.<*|Promise.<string>>}
      */
     createChildTable: async function (tableSchema, parentTableName, tableName, columns, client) {
+      const parentTableNames = _.isArray(parentTableName) ? parentTableName : [parentTableName];
       const spl = `
         CREATE TABLE IF NOT EXISTS ${tableSchema}."${tableName}"
           (
@@ -143,7 +144,7 @@ module.exports = function (CB) {
               return this._generateColumnClause(object);
             }).join(', ')}
           )
-        INHERITS ("${parentTableName}")
+        INHERITS ("${parentTableNames.join('","')}")
       `;
       const _client = client || await CB.pg.connect();
       try {

@@ -11,10 +11,16 @@ module.exports = function (CB) {
    * @constructor
    */
   CB.Relation = function (className, relationId, key) {
-    className = _.isString(className) ? className : className.prototype.className;
-    this.className = className;
-    this.relationId = relationId || shortId.generate();
-    this.key = key || '';
+    if(_.isObject(className) && !relationId && !key) {
+      this.className = className.className;
+      this.relationId = className.relationId;
+      this.key = className.key;
+    }else {
+      className = _.isString(className) ? className : className.prototype.className;
+      this.className = className;
+      this.relationId = relationId || shortId.generate();
+      this.key = key || '';
+    }
   };
 
   CB.Relation.prototype = {

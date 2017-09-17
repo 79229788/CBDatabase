@@ -12,7 +12,8 @@ CB.initPG({
   password  : config_postgres.postgres.password,
   database  : 'test',
   tableList : config_tables.tables,
-  printSql  : true,
+  printSql        : true,
+  printSqlParams  : true
 });
 CB.initOSS({
   region          : config_oss.oss.region,
@@ -34,20 +35,70 @@ const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
-const query = new CB.Query(Product);
-query.include('cate', ProductCate);
 
-// query.include('subCate', ProductCate);
+const query = new CB.Query(Product);
+query.equalTo('objectId', 'HyHKkbEZcb');
+query.include('subCate', ProductCate);
 // query.include('priceMap', ProductPriceMap);
 // query.includeArray('priceMap.levels', ProductPriceLevel);
 // query.includeArray('priceMap.alones', ProductPriceAlone);
-query.get('HyHKkbEZcb').then(function (data) {
+query.first().then(function (data) {
   console.log(data.toOrigin());
 }).catch(function (error) {
   console.log(error);
 });
 
+// const query1 = new CB.UnionQuery(Product);
+// query1.equalTo('objectId', 'HyHKkbEZcb');
+//
+// const query2 = new CB.UnionQuery(Product);
+// query2.equalTo('objectId', 'HyHKkbEZcb');
+//
+// const query = new CB.UnionQueryAndAll(query1, query2);
+//
+// query.count().then(function (data) {
+//   console.log(data);
+// }).catch(function (error) {
+//   console.log(error);
+// });
 
+// (async () => {
+//   const cate = new ProductCate();
+//   cate.set('name', '分类a');
+//   await cate.save();
+//   cate.set('desc', '描述a');
+//   await cate.save();
+//   throw new Error('error');
+//   console.log('OK');
+// })().catch(error => {
+//   console.log(error);
+// });
+
+// (async () => {
+//   const cate = new ProductCate({objectId: 'hh', name: '分类a'}, {serverData: true});
+//   cate.set('name', '分类a');
+//   cate.set('desc', '描述a');
+//   await cate.save();
+//   throw new Error('error');
+//   console.log('OK');
+// })().catch(error => {
+//   console.log(error);
+// });
+
+
+// const level = new ProductPriceLevel();
+// level.id = 'SkxYy-Eb5b';
+//
+// const level2 = new ProductPriceLevel();
+// level2.id = 'B1ZFkWNZq-';
+//
+// const query = new CB.Query(ProductPriceMap);
+// query.containsAllArray('levels', [level, level2]);
+// query.find().then(function (data) {
+//   console.log(data);
+// }).catch(function (error) {
+//   console.log(error);
+// });
 
 //
 // const cate3 = new ProductCate();

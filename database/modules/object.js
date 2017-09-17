@@ -20,10 +20,7 @@ module.exports = function (CB) {
     this._serverData = (options || {}).serverData || false;
     this._hasData = (options || {}).hasData || true;
     this.set(attributes);
-    const previous = this.toOrigin();
-    delete previous.objectId; //记录初始原型数据时删除id，为了在判断模型是否更新时，id不做参考（即：模型如果仅仅修改了id，不算是对当前模型进行了更新）
-    this._previousModel = this.clone();
-    this._previousAttributes = previous;
+    this._previousAttributes = _.cloneDeep(this.attributes);
     this.init.apply(this, arguments);
   };
 
@@ -63,9 +60,7 @@ module.exports = function (CB) {
      * @return {boolean}
      */
     isChanged: function () {
-      const current = this.toOrigin();
-      delete current.objectId;
-      return !_.isEqual(current, this._previousAttributes);
+      return !_.isEqual(this.attributes, this._previousAttributes);
     },
     /**
      * 获取数据
@@ -217,7 +212,7 @@ module.exports = function (CB) {
      */
     _toSaveOrigin: function () {
       const curr = this.clone();
-      const prev = this._previousModel;
+      const prev = new CB.Object(this._previousAttributes, {serverData: true});
       const saveObject = {};
       for(let key of Object.keys(curr.attributes)) {
         const value = curr.attributes[key];
@@ -427,6 +422,7 @@ module.exports = function (CB) {
         delete model.attributes[key];
       }
     });
+    model._previousAttributes = _.cloneDeep(model.attributes);
   };
   /**
    * 获取关系表ClassName
