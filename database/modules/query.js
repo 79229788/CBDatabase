@@ -631,6 +631,13 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     count: async function (client) {
+      if(this.isUnionQuery) {
+        this._unionQueryOptions.queryOptionsCollection.forEach(item => {
+          checkQueryOptions(item);
+        });
+      }else {
+        checkQueryOptions(this._queryOptions);
+      }
       return await CB.crud.find(this.className, 'count', this._unionQueryOptions || this._queryOptions, client);
     }
   };

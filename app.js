@@ -36,31 +36,45 @@ const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
 
-const query = new CB.Query(Product);
-query.equalTo('objectId', 'HyHKkbEZcb');
-query.include('subCate', ProductCate);
+// const query = new CB.Query(Product);
+// query.select('priceMap');
+// query.equalTo('objectId', 'HyHKkbEZcb');
+// //query.include('subCate', ProductCate);
 // query.include('priceMap', ProductPriceMap);
-// query.includeArray('priceMap.levels', ProductPriceLevel);
+// // query.includeArray('priceMap.levels', ProductPriceLevel);
 // query.includeArray('priceMap.alones', ProductPriceAlone);
-query.first().then(function (data) {
-  console.log(data.toOrigin());
-}).catch(function (error) {
-  console.log(error);
-});
+// query.first().then(function (data) {
+//   console.log(data.get('priceMap').toOrigin());
+// }).catch(function (error) {
+//   console.log(error);
+// });
 
-// const query1 = new CB.UnionQuery(Product);
-// query1.equalTo('objectId', 'HyHKkbEZcb');
-//
-// const query2 = new CB.UnionQuery(Product);
-// query2.equalTo('objectId', 'HyHKkbEZcb');
-//
-// const query = new CB.UnionQueryAndAll(query1, query2);
-//
+// const query = new CB.Query(Product);
+// query.equalTo('objectId', 'Sy4t1b4bcZ');
+// // query.includeArray('levels', ProductPriceLevel);
+// query.include('cate', ProductCate);
+// query.include('cate', ProductCate);
 // query.count().then(function (data) {
 //   console.log(data);
 // }).catch(function (error) {
 //   console.log(error);
 // });
+
+const query1 = new CB.UnionQuery(Product);
+query1.include('cate', ProductCate);
+query1.equalTo('objectId', 'HyHKkbEZcb');
+
+const query2 = new CB.UnionQuery(Product);
+query2.include('cate', ProductCate);
+query2.equalTo('objectId', 'HyHKkbEZcb');
+
+const query = new CB.UnionQueryAndAll(query1, query2);
+
+query.count().then(function (data) {
+  console.log(data);
+}).catch(function (error) {
+  console.log(error);
+});
 
 // (async () => {
 //   const cate = new ProductCate();

@@ -40,12 +40,10 @@ module.exports = function (CB) {
             return null;
           }
         });
-      }else {
-        if(newItem) {
-          return _.extend(oldItem, newItem);
-        }else {
-          return null;
-        }
+      }else if(!oldItem && _.isArray(newItem)) {
+        return [];
+      }else if(oldItem) {
+        return newItem ? _.extend(oldItem, newItem) : null;
       }
     }
   };
@@ -354,10 +352,8 @@ module.exports = function (CB) {
             limit = 1;
             break;
           case 'count':
-            selectClause = `count('objectId')`;
+            selectClause = `COUNT(1) ${opts.includeCollection.length > 0 ? 'OVER()' : ''}`;
             joinsSelectClause = '';
-            joinsRelationClause = '';
-            joinsGroupClause = '';
             orderClause = '';
             break;
         }
@@ -372,8 +368,8 @@ module.exports = function (CB) {
           ${whereClause}
           ${joinsGroupClause}
           ${orderClause}
-          ${type !== 'count' ? `OFFSET ${opts.skip}` : ''}
-          ${type !== 'count' ? `LIMIT ${opts.limit}` : ''}
+          OFFSET ${type === 'count' ? '0' : opts.skip}
+          LIMIT ${type === 'count' ? '1' : opts.limit}
         `;
       }else {
         const items = [];
@@ -391,11 +387,18 @@ module.exports = function (CB) {
             []
           );
           //*****查询类型
-          const selectClause = type !== 'count' ? clauses.selectClause : 'count("objectId")';
-          const joinsSelectClause = type !== 'count' ? clauses.joinsSelectClause : '';
-          const joinsRelationClause = type !== 'count' ? clauses.joinsRelationClause : '';
-          const whereClause = clauses.whereClause;
-          const joinsGroupClause = type !== 'count' ? clauses.joinsGroupClause : '';
+          let selectClause =clauses.selectClause;
+          let joinsSelectClause = clauses.joinsSelectClause;
+          let joinsRelationClause = clauses.joinsRelationClause;
+          let whereClause = clauses.whereClause;
+          let joinsGroupClause = clauses.joinsGroupClause;
+          //*****查询类型
+          switch (type) {
+            case 'count':
+              selectClause = `COUNT(1) ${item.includeCollection.length > 0 ? 'OVER()' : ''}`;
+              joinsSelectClause = '';
+              break;
+          }
           items.push(`
             (SELECT
               ${selectClause}
@@ -404,7 +407,10 @@ module.exports = function (CB) {
               ${opts.only ? 'ONLY' : ''} "${item.className}"
             ${joinsRelationClause}
             ${whereClause}
-            ${joinsGroupClause})
+            ${joinsGroupClause}
+            ${type === 'count' ? 'OFFSET 0' : ''}
+            ${type === 'count' ? 'LIMIT 1' : ''}
+            )
           `);
         });
         let orderClause = 'ORDER BY ' + (opts.orderCollection.length === 0
