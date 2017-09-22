@@ -35,7 +35,7 @@ module.exports = function (CB) {
         return oldItem.map((item) => {
           const _newItem = _.find(newItem, {objectId: item.objectId});
           if(_newItem) {
-            return _.extend(item, _.find(newItem, {objectId: item.objectId}));
+            return _.extend(item, _newItem);
           }else {
             return null;
           }
@@ -462,13 +462,12 @@ module.exports = function (CB) {
      * 保存数据（有则创建，没有则更新）
      * @param className
      * @param object
+     * @param conditionCollection (仅在更新时有用)
      * @param client
      */
-    save: async function (className, object, client) {
+    save: async function (className, object, conditionCollection, client) {
       if(object.objectId && ['undefined', 'null', 'false', 'NaN'].indexOf(object.objectId) < 0) {
-        return await this.update(className, object, {
-          objectId: object.objectId
-        }, client);
+        return await this.update(className, object, conditionCollection, client);
       }else {
         return await this.create(className, object, client);
       }
@@ -522,6 +521,7 @@ module.exports = function (CB) {
       const _client = client || await CB.pg.connect();
       try {
         const result = await _client.query(sql, params);
+        if(result.rowCount === 0) return null;
         if(returningValues.length > 0) {
           result.rows.forEach((row) => {
             _.each(object, (value, key) => {
@@ -550,13 +550,27 @@ module.exports = function (CB) {
      */
     update: async function (className, object, condition, client) {
       if(_.size(object) === 0) return;
+      //*****获取查询语句
+      let otherWhereClause = '';
+      let conditionClauseItems = [];
+      let conditionClauseMap = {};
+      if(condition) {
+        condition.forEach((conditionObject) => {
+          const clause = Condition(className, conditionObject);
+          if(conditionObject.name) conditionClauseMap[className + conditionObject.name] = clause;
+          conditionClauseItems.push(clause);
+        });
+        if(conditionClauseItems.length > 0) {
+          otherWhereClause = 'AND ' + conditionClauseItems.join(' AND ');
+        }
+      }
+
+      //重新得到要更新的object
       _.extend(object, {
         updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
       });
       const tmpObject = _.clone(object);
-      _.each(condition, (value, key) => {
-        delete tmpObject[key];
-      });
+      delete tmpObject.objectId;
       //指定需要立即返回的字段
       const returningValues = [];
       _.each(tmpObject, (value, key) => {
@@ -594,20 +608,17 @@ module.exports = function (CB) {
         return `"${key}" = $${index}`;
       }).join(',')}
         WHERE
-          ${
-        _.map(condition, (value, key) => {
-          index++;
-          return `"${key}" = $${index}`;
-        }).join(',')
-        }
+          "objectId" = $${index + 1}
+          ${otherWhereClause}
         ${returningClause}
       `;
-      const params = _.values(tmpObject).concat(_.values(condition));
+      const params = _.values(tmpObject).concat([object.objectId]);
       printSql(sql, className, 'update');
       printSqlParams(params, className, 'update');
       const _client = client || await CB.pg.connect();
       try {
         const result = await _client.query(sql, params);
+        if(result.rowCount === 0) return null;
         if(returningValues.length > 0) {
           result.rows.forEach((row) => {
             _.each(object, (value, key) => {
@@ -629,31 +640,48 @@ module.exports = function (CB) {
     /**
      * 删除数据
      * @param className
-     * @param condition
+     * @param idCondition
+     * @param otherCondition
      * @param client
      */
-    delete: async function (className, condition, client) {
+    delete: async function (className, idCondition, otherCondition, client) {
+      //*****获取查询语句
+      let otherWhereClause = '';
+      let conditionClauseItems = [];
+      let conditionClauseMap = {};
+      if(otherCondition) {
+        otherCondition.forEach((conditionObject) => {
+          const clause = Condition(className, conditionObject);
+          if(conditionObject.name) conditionClauseMap[className + conditionObject.name] = clause;
+          conditionClauseItems.push(clause);
+        });
+        if(conditionClauseItems.length > 0) {
+          otherWhereClause = 'AND ' + conditionClauseItems.join(' AND ');
+        }
+      }
+
       let index = 0;
       const sql = `
         DELETE FROM 
           "${className}" 
         WHERE 
           ${
-        _.map(condition, (value, key) => {
-          index++;
-          if(key.indexOf(':batch') > 0) {
-            return `"${key.replace(':batch', '')}" = ANY(VALUES ${value.map(() => {
-              const item = `($${index})`;
+            _.map(idCondition, (value, key) => {
               index++;
-              return item;
-            }).join(',')})`;
+              if(key.indexOf(':batch') > 0) {
+                return `"${key.replace(':batch', '')}" = ANY(VALUES ${value.map(() => {
+                  const item = `($${index})`;
+                  index++;
+                  return item;
+                }).join(',')})`;
+              }
+              return `"${key}" = $${index}`;
+            }).join(',')
           }
-          return `"${key}" = $${index}`;
-        }).join(',')
-        } 
+        ${otherWhereClause}
       `;
       const params = [];
-      _.each(condition, (value, key) => {
+      _.each(idCondition, (value, key) => {
         if(key.indexOf(':batch') > 0) {
           value.forEach((item) => {
             params.push(item);
@@ -666,7 +694,8 @@ module.exports = function (CB) {
       printSqlParams(params, className, 'delete');
       const _client = client || await CB.pg.connect();
       try {
-        await _client.query(sql, params);
+        const result = await _client.query(sql, params);
+        if(result.rowCount === 0) return null;
         return 'ok';
       }catch (error) {
         throw new Error(`[DATABASE DELETE ERROR] - ${className}: [${error.code || -1}]${error.message}`);

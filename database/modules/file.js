@@ -251,7 +251,7 @@ module.exports = function (CB) {
       delete unsaved.__type;
       delete unsaved.className;
       delete unsaved.objectId;
-      const saved = await CB.crud.save('_File', unsaved, client);
+      const saved = await CB.crud.save('_File', unsaved, null, client);
       this.id = saved.objectId;
       return this;
     },

@@ -39,6 +39,7 @@ module.exports.tables = [
       {name: 'objectId', type: 'text', isPrimary: true},
       {name: 'createdAt', type: 'character(19)'},
       {name: 'updatedAt', type: 'character(19)'},
+      {name: 'number', type: 'integer', default: 0},
       {name: 'name', type: 'text'},
       {name: 'desc', type: 'text'},
     ]

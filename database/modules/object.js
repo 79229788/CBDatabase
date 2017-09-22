@@ -308,6 +308,14 @@ module.exports = function (CB) {
       return child;
     },
     /**
+     * 设置保存时的查询
+     * @param query
+     */
+    setQuery: function (query) {
+      if(!(query instanceof CB.Query)) throw new Error('setQuery方法的query参数必须为CB.Query实例');
+      this._queryCondition = query._queryOptions.conditionCollection;
+    },
+    /**
      * 保存数据
      * @return {*}
      */
@@ -320,10 +328,9 @@ module.exports = function (CB) {
      * @return {Promise.<CB>}
      */
     destroy: async function(client) {
-      await CB.crud.delete(this.className, {
+      return await CB.crud.delete(this.className, {
         objectId: this.id
-      }, client);
-      return this;
+      }, this._queryCondition, client);
     },
 
   });
@@ -353,11 +360,11 @@ module.exports = function (CB) {
       if(items.length > 1) {
         await CB.crud.delete(className, {
           'objectId:batch': items.map(item => item.id)
-        }, client);
+        }, this._queryCondition, client);
       }else if(items.length === 1) {
         await CB.crud.delete(className, {
           'objectId': items[0].id
-        }, client);
+        }, this._queryCondition, client);
       }
     }
   };
@@ -395,14 +402,15 @@ module.exports = function (CB) {
           await child.save(client);
         }else if(child instanceof CB.Object && child.isChanged()) {
           const saveObject = child._toSaveOrigin();
-          const savedData = await CB.crud.save(child.className, saveObject, client);
+          const savedData = await CB.crud.save(child.className, saveObject, child._queryCondition, client);
           CB.Object._assignSavedData(savedData, child);
         }
       }
     }
     //***再保存当前模型
     const saveObject = model._toSaveOrigin();
-    const savedData = await CB.crud.save(model.className, saveObject, client);
+    const savedData = await CB.crud.save(model.className, saveObject, model._queryCondition, client);
+    if(!savedData) return null;
     CB.Object._assignSavedData(savedData, model);
     return model;
   };

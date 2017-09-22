@@ -27,6 +27,7 @@ CB.initSessionRedis({
   password      : config_redis.redis.sessionRedis.password,
 });
 
+const  http = require('http');
 const Company = CB.Object.extend('Company');
 const Product = CB.Object.extend('Product');
 const ProductCate = CB.Object.extend('ProductCate');
@@ -34,7 +35,39 @@ const ProductPriceMap = CB.Object.extend('ProductPriceMap');
 const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
+const query = new CB.Query(ProductCate);
+query.equalTo('objectId', 'HyrqbPZ5b');
+query.equalTo('number', 0);
 
+const cate = new ProductCate();
+cate.id = 'rkWKXVMiZ3';
+//cate.set('name', '分类2');
+cate.setQuery(query);
+cate.destroy().then(data => {
+  console.log(data);
+});
+
+// let index = 0;
+// http.createServer( function (req, res) {
+//   res.writeHead( 200 , {"Content-Type": "text/html"});
+//   res.write("<p>Hello World</p>");
+//   //
+//   // const query = new CB.Query(ProductCate);
+//   // query.equalTo('objectId', 'HyrqbPZ5b');
+//   // query.equalTo('number', 0);
+//   //
+//   const cate = new ProductCate();
+//   cate.id = 'HyrqbPZ5b';
+//   cate.increment('number', 1);
+//   //cate.setQuery(query);
+//   cate.save();
+//
+//   index++;
+//
+//   console.log(index);
+//
+//   res.end();
+// }).listen(3000);
 
 // const query = new CB.Query(Product);
 // query.select('priceMap');
@@ -60,33 +93,60 @@ const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 //   console.log(error);
 // });
 
-const query1 = new CB.UnionQuery(Product);
-query1.include('cate', ProductCate);
-query1.equalTo('objectId', 'HyHKkbEZcb');
-
-const query2 = new CB.UnionQuery(Product);
-query2.include('cate', ProductCate);
-query2.equalTo('objectId', 'HyHKkbEZcb');
-
-const query = new CB.UnionQueryAndAll(query1, query2);
-
-query.count().then(function (data) {
-  console.log(data);
-}).catch(function (error) {
-  console.log(error);
-});
-
-// (async () => {
-//   const cate = new ProductCate();
-//   cate.set('name', '分类a');
-//   await cate.save();
-//   cate.set('desc', '描述a');
-//   await cate.save();
-//   throw new Error('error');
-//   console.log('OK');
-// })().catch(error => {
+// const query1 = new CB.UnionQuery(Product);
+// query1.include('cate', ProductCate);
+// query1.equalTo('objectId', 'HyHKkbEZcb');
+//
+// const query2 = new CB.UnionQuery(Product);
+// query2.include('cate', ProductCate);
+// query2.equalTo('objectId', 'HyHKkbEZcb');
+//
+// const query = new CB.UnionQueryAndAll(query1, query2);
+//
+// query.count().then(function (data) {
+//   console.log(data);
+// }).catch(function (error) {
 //   console.log(error);
 // });
+
+
+
+// for(let i = 0; i < 1000; i++) {
+//   setTimeout(() => {
+//     const query = new CB.Query(ProductCate);
+//     query.equalTo('objectId', 'HyrqbPZ5b');
+//     query.equalTo('number', 0);
+//
+//     const cate = new ProductCate();
+//     cate.id = 'HyrqbPZ5b';
+//     cate.increment('number', 10);
+//     cate.setQuery(query);
+//     cate.save();
+//   }, 1000);
+// }
+
+// for(let i = 0; i < 1000; i++) {
+//   setTimeout(async () => {
+//     CB.Cloud.Transaction(async (client) => {
+//       const query = new CB.Query(ProductCate);
+//       query.equalTo('objectId', 'HyrqbPZ5b');
+//       query.equalTo('number', 0);
+//
+//       const cate = new ProductCate();
+//       cate.id = 'HyrqbPZ5b';
+//       cate.increment('number', 10);
+//       cate.setQuery(query);
+//       await cate.save(client);
+//     }).catch(error => {
+//       console.log(error);
+//     });
+//   }, 1000);
+// }
+
+
+
+
+
 
 // (async () => {
 //   const cate = new ProductCate({objectId: 'hh', name: '分类a'}, {serverData: true});
