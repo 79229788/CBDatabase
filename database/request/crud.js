@@ -645,7 +645,27 @@ module.exports = function (CB) {
      * @param client
      */
     delete: async function (className, idCondition, otherCondition, client) {
-      //*****获取查询语句
+      //*****获取id查询语句
+      let index = 0;
+      let idWhereClause = '';
+      _.each(idCondition, (value, key) => {
+        index++;
+        if(key.indexOf(':batch') > 0) {
+          const ids = [];
+          _.each(value, (v) => {
+            if(v) {
+              ids.push(`($${index})`);
+              index++;
+            }
+          });
+          if(ids.length > 0) {
+            idWhereClause = `"${key.replace(':batch', '')}" = ANY(VALUES ${ids.join(',')})`;
+          }
+        }else {
+          if(value) idWhereClause = `"${key}" = $${index}`;
+        }
+      });
+      //*****获取其它查询语句
       let otherWhereClause = '';
       let conditionClauseItems = [];
       let conditionClauseMap = {};
@@ -656,38 +676,24 @@ module.exports = function (CB) {
           conditionClauseItems.push(clause);
         });
         if(conditionClauseItems.length > 0) {
-          otherWhereClause = 'AND ' + conditionClauseItems.join(' AND ');
+          otherWhereClause = conditionClauseItems.join(' AND ');
         }
       }
 
-      let index = 0;
       const sql = `
         DELETE FROM 
           "${className}" 
         WHERE 
-          ${
-            _.map(idCondition, (value, key) => {
-              index++;
-              if(key.indexOf(':batch') > 0) {
-                return `"${key.replace(':batch', '')}" = ANY(VALUES ${value.map(() => {
-                  const item = `($${index})`;
-                  index++;
-                  return item;
-                }).join(',')})`;
-              }
-              return `"${key}" = $${index}`;
-            }).join(',')
-          }
-        ${otherWhereClause}
+          ${_.compact([idWhereClause, otherWhereClause]).join(' AND ')}
       `;
       const params = [];
       _.each(idCondition, (value, key) => {
         if(key.indexOf(':batch') > 0) {
           value.forEach((item) => {
-            params.push(item);
+            if(item) params.push(item);
           });
         }else {
-          params.push(value);
+          if(value) params.push(value);
         }
       });
       printSql(sql, className, 'delete');
@@ -702,6 +708,17 @@ module.exports = function (CB) {
       }finally {
         if(!client) _client.release();
       }
+    },
+    /**
+     * 自定义查询语句
+     * @param sql
+     * @param params
+     * @param client
+     * @return {Promise.<*>}
+     */
+    custom: async function (sql, params, client) {
+      const _client = client || await CB.pg.connect();
+      return await _client.query(sql, params)
     },
   };
   /**

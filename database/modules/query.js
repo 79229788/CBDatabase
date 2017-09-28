@@ -20,6 +20,16 @@ module.exports = function (CB) {
     };
   };
   /**
+   * 完全自定义查询
+   * @param sql
+   * @param params
+   * @param client
+   * @return {Promise.<*|Promise.<*>>}
+   */
+  CB.Query.doCloudQuery = async function (sql, params, client) {
+    return await CB.crud.custom(sql, params, client)
+  };
+  /**
    * 用户查询
    * @param childClass
    * @constructor
@@ -190,6 +200,7 @@ module.exports = function (CB) {
         value: value,
         type: type
       });
+      return this;
     },
     _jsonCondition: function (key, jsonKey, jsonValue, name, type) {
       this._queryOptions.conditionCollection.push({
@@ -199,6 +210,7 @@ module.exports = function (CB) {
         jsonValue: jsonValue,
         type: type
       });
+      return this;
     },
     //*************************************基本类型判断
     //*************************************
@@ -214,6 +226,9 @@ module.exports = function (CB) {
         return this._jsonCondition(key, 'objectId', value.id, name, 'equalInJson');
       }
       if(_.isArray(value)) {
+        if(value.length === 0) {
+          throw new Error('equalTo在匹配数组查询时，不能为空！');
+        }
         if(value.length === 1) {
           return this.equalTo(key, value[0], name);
         }
@@ -222,8 +237,7 @@ module.exports = function (CB) {
         }
         return this._baseCondition(key, value, name, 'equals');
       }
-      this._baseCondition(key, value, name, 'equal');
-      return this;
+      return this._baseCondition(key, value, name, 'equal');
     },
     /**
      * 值不相等
@@ -233,8 +247,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     notEqualTo: function (key, value, name) {
-      this._baseCondition(key, value, name, 'notEqual');
-      return this;
+      return this._baseCondition(key, value, name, 'notEqual');
     },
     /**
      * 值大于
@@ -244,8 +257,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     greaterThan: function (key, value, name) {
-      this._baseCondition(key, value, name, 'greaterThan');
-      return this;
+      return this._baseCondition(key, value, name, 'greaterThan');
     },
     /**
      * 值大于等于
@@ -255,8 +267,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     greaterThanOrEqual: function (key, value, name) {
-      this._baseCondition(key, value, name, 'greaterThanOrEqual');
-      return this;
+      return this._baseCondition(key, value, name, 'greaterThanOrEqual');
     },
     /**
      * 值小雨
@@ -266,8 +277,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     lessThan: function (key, value, name) {
-      this._baseCondition(key, value, name, 'lessThan');
-      return this;
+      return this._baseCondition(key, value, name, 'lessThan');
     },
     /**
      * 值小于等于
@@ -277,8 +287,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     lessThanOrEqual: function (key, value, name) {
-      this._baseCondition(key, value, name, 'lessThanOrEqual');
-      return this;
+      return this._baseCondition(key, value, name, 'lessThanOrEqual');
     },
     /**
      * 值前缀
@@ -288,8 +297,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     prefixText: function (key, value, name) {
-      this._baseCondition(key, value, name, 'prefixText');
-      return this;
+      return this._baseCondition(key, value, name, 'prefixText');
     },
     /**
      * 值后缀
@@ -299,8 +307,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     suffixText: function (key, value, name) {
-      this._baseCondition(key, value, name, 'suffixText');
-      return this;
+      return this._baseCondition(key, value, name, 'suffixText');
     },
     /**
      * 值字符包含
@@ -310,8 +317,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     containsText: function (key, value, name) {
-      this._baseCondition(key, value, name, 'containsText');
-      return this;
+      return this._baseCondition(key, value, name, 'containsText');
     },
     //*************************************数组类型判断
     //*************************************
@@ -326,8 +332,7 @@ module.exports = function (CB) {
       if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
         array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
       }
-      this._baseCondition(key, array, name, 'containsAllArray');
-      return this;
+      return this._baseCondition(key, array, name, 'containsAllArray');
     },
     /**
      * [数组属性]全部不包含
@@ -340,8 +345,7 @@ module.exports = function (CB) {
       if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
         array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
       }
-      this._baseCondition(key, array, name, 'notContainAllArray');
-      return this;
+      return this._baseCondition(key, array, name, 'notContainAllArray');
     },
     /**
      * [数组属性]包含指定元素
@@ -354,8 +358,7 @@ module.exports = function (CB) {
       if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
         array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
       }
-      this._baseCondition(key, array, name, 'containsInArray');
-      return this;
+      return this._baseCondition(key, array, name, 'containsInArray');
     },
     /**
      * [数组属性]不包含指定元素
@@ -368,8 +371,7 @@ module.exports = function (CB) {
       if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
         array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
       }
-      this._baseCondition(key, array, name, 'notContainInArray');
-      return this;
+      return this._baseCondition(key, array, name, 'notContainInArray');
     },
     /**
      * [数组属性]被包含指定元素
@@ -382,8 +384,7 @@ module.exports = function (CB) {
       if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
         array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
       }
-      this._baseCondition(key, array, name, 'containedByArray');
-      return this;
+      return this._baseCondition(key, array, name, 'containedByArray');
     },
     /**
      * [数组属性]与指定元素有重叠
@@ -396,7 +397,24 @@ module.exports = function (CB) {
       if(array[0] instanceof CB.Object || array[0] instanceof CB.File) {
         array = array.map(item => JSON.stringify(item.getPointer()).replace(/"/g, '\\"'));
       }
-      this._baseCondition(key, array, name, 'overlapInArray');
+      return this._baseCondition(key, array, name, 'overlapInArray');
+    },
+    /**
+     * [数组属性]数组长度匹配
+     * @param key
+     * @param dimension 维度
+     * @param length
+     * @param name
+     * @return {CB}
+     */
+    lengthInArray: function (key, dimension = 1, length, name) {
+      this._queryOptions.conditionCollection.push({
+        name: name || '',
+        key: key,
+        dim: dimension,
+        value: length,
+        type: 'lengthInArray'
+      });
       return this;
     },
     //*************************************JSON类型判断
@@ -409,8 +427,7 @@ module.exports = function (CB) {
      * @param name
      */
     equalInJson: function (key, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, jsonKey, jsonValue, name, 'equalInJson');
-      return this;
+      return this._jsonCondition(key, jsonKey, jsonValue, name, 'equalInJson');
     },
     /**
      * [JSON属性]元素不相等
@@ -420,8 +437,7 @@ module.exports = function (CB) {
      * @param name
      */
     notEqualInJson: function (key, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, jsonKey, jsonValue, name, 'notEqualInJson');
-      return this;
+      return this._jsonCondition(key, jsonKey, jsonValue, name, 'notEqualInJson');
     },
     /**
      * [JSON属性]元素大于
@@ -431,8 +447,7 @@ module.exports = function (CB) {
      * @param name
      */
     greaterThanInJson: function (key, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, jsonKey, jsonValue, name, 'greaterThanInJson');
-      return this;
+      return this._jsonCondition(key, jsonKey, jsonValue, name, 'greaterThanInJson');
     },
     /**
      * [JSON属性]元素大于等于
@@ -442,8 +457,7 @@ module.exports = function (CB) {
      * @param name
      */
     greaterThanOrEqualInJson: function (key, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, jsonKey, jsonValue, name, 'greaterThanOrEqualInJson');
-      return this;
+      return this._jsonCondition(key, jsonKey, jsonValue, name, 'greaterThanOrEqualInJson');
     },
     /**
      * [JSON属性]元素小于
@@ -453,8 +467,7 @@ module.exports = function (CB) {
      * @param name
      */
     lessThanInJson: function (key, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, jsonKey, jsonValue, name, 'lessThanInJson');
-      return this;
+      return this._jsonCondition(key, jsonKey, jsonValue, name, 'lessThanInJson');
     },
     /**
      * [JSON属性]元素小于等于
@@ -464,8 +477,7 @@ module.exports = function (CB) {
      * @param name
      */
     lessThanOrEqualInJson: function (key, jsonKey, jsonValue, name) {
-      this._jsonCondition(key, jsonKey, jsonValue, name, 'lessThanOrEqualInJson');
-      return this;
+      return this._jsonCondition(key, jsonKey, jsonValue, name, 'lessThanOrEqualInJson');
     },
     /**
      * [JSON属性]存在某个key
@@ -474,8 +486,7 @@ module.exports = function (CB) {
      * @param name
      */
     existKeyInJson: function (key, value, name) {
-      this._baseCondition(key, value, name, 'existKeyInJson');
-      return this;
+      return this._baseCondition(key, value, name, 'existKeyInJson');
     },
     /**
      * [JSON属性]存在多个key中的任意一个
@@ -485,8 +496,7 @@ module.exports = function (CB) {
      */
     existAnyKeysInJson: function (key, array, name) {
       array = _.isArray(array) ? array : [array];
-      this._baseCondition(key, array, name, 'existAnyKeysInJson');
-      return this;
+      return this._baseCondition(key, array, name, 'existAnyKeysInJson');
     },
     /**
      * [JSON属性]存在指定的全部key
@@ -496,8 +506,7 @@ module.exports = function (CB) {
      */
     existAllKeysInJson: function (key, array, name) {
       array = _.isArray(array) ? array : [array];
-      this._baseCondition(key, array, name, 'existAllKeysInJson');
-      return this;
+      return this._baseCondition(key, array, name, 'existAllKeysInJson');
     },
     /**
      * [JSON属性]包含指定对象
@@ -506,8 +515,7 @@ module.exports = function (CB) {
      * @param name
      */
     containsInJson: function (key, object, name) {
-      this._baseCondition(key, object, name, 'lessThanOrEqualInJson');
-      return this;
+      return this._baseCondition(key, object, name, 'lessThanOrEqualInJson');
     },
     /**
      * [JSON属性]被包含指定对象
@@ -516,8 +524,7 @@ module.exports = function (CB) {
      * @param name
      */
     containedByJson: function (key, object, name) {
-      this._baseCondition(key, object, name, 'lessThanOrEqualInJson');
-      return this;
+      return this._baseCondition(key, object, name, 'lessThanOrEqualInJson');
     },
     //*************************************其它
     //*************************************

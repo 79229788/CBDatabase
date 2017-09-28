@@ -25,6 +25,10 @@ module.exports = function (CB) {
 
   CB.Relation.prototype = {
     /**
+     * 关闭子表关联（关闭后，请务必保证要保存的主表中有__key字段）
+     */
+    _disabledChildTable: false,
+    /**
      * 转化为json
      * @return {string}
      */
@@ -64,12 +68,17 @@ module.exports = function (CB) {
         }
       }
       const parentClassName = this.className;
-      const relationClassName = `${this.className}@_@${this.relationId}`;
-      await CB.table.createChildTable('public', parentClassName, relationClassName, [
-        {name: 'objectId', type: 'text', isPrimary: true},
-        {name: '__key', type: 'text'},
-      ], client);
-      this.key = shortId.generate();
+      let relationClassName = `${this.className}@_@${this.relationId}`;
+      if(!this._disabledChildTable) {
+        await CB.table.createChildTable('public', parentClassName, relationClassName, [
+          {name: 'objectId', type: 'text', isPrimary: true},
+          {name: '__key', type: 'text'},
+        ], client);
+        this.key = shortId.generate();
+      }else {
+        relationClassName = this.className;
+        this.key = this.relationId;
+      }
       const unsavedModels = [];
       for(let model of objects) {
         model._className = relationClassName;
@@ -85,7 +94,8 @@ module.exports = function (CB) {
     query: function () {
       if(!this.className || !this.relationId) throw new Error('[Relation error] the className or relationId not find');
       if(!this.key) throw new Error(`[Relation error] the key not find！`);
-      const query = new CB.Query(`${this.className}@_@${this.relationId}`);
+      const className = this._disabledChildTable ? this.className : `${this.className}@_@${this.relationId}`;
+      const query = new CB.Query(className);
       query.equalTo('__key', this.key);
       return query;
     },

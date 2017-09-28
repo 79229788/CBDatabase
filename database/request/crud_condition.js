@@ -46,6 +46,15 @@ module.exports = function (className, object) {
     //数组元素不被包含
     case 'notContainInArray':
       return `NOT ('${object.value}' = ANY("${className}"."${object.key}"))`;
+    //匹配数组长度
+    case 'lengthInArray':
+      if(object.value === 0) {
+        return `
+        (ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) IS NULL
+        OR ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = 0)
+        `;
+      }
+      return `ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = ${object.value}`;
 
 
     //**************************************************

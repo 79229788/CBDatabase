@@ -12,13 +12,17 @@ const checkReservedKey = function checkReservedKey(key) {
 
 module.exports = function (CB) {
   CB.Object = function (attributes, options) {
-    if(_.isString(attributes)) return new CB.Object({className: attributes});
     attributes = attributes || {};
+    options = options || {};
+    if(_.isString(attributes)) {
+      attributes = {objectId: attributes};
+      options.serverData = true;
+    }
     if(attributes.constructor === this.constructor) attributes = attributes.toOrigin();
     this.parseDefaultDate(attributes);
     this.cid = _.uniqueId('c');
-    this._serverData = (options || {}).serverData || false;
-    this._hasData = (options || {}).hasData || true;
+    this._serverData = options.serverData || false;
+    this._hasData = options.hasData || true;
     this.set(attributes);
     this._previousAttributes = _.cloneDeep(this.attributes);
     this.init.apply(this, arguments);
@@ -306,6 +310,13 @@ module.exports = function (CB) {
         }
       })(this);
       return child;
+    },
+    /**
+     * 改变class
+     * @param className
+     */
+    changeClass: function (className) {
+      this._className = _.isString(className) ? className : className.prototype.className;
     },
     /**
      * 设置保存时的查询

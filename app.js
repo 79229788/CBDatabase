@@ -35,17 +35,21 @@ const ProductPriceMap = CB.Object.extend('ProductPriceMap');
 const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
-const query = new CB.Query(ProductCate);
-query.equalTo('objectId', 'HyrqbPZ5b');
-query.equalTo('number', 0);
+const cate = new Company('hsahd');
 
-const cate = new ProductCate();
-cate.id = 'rkWKXVMiZ3';
-//cate.set('name', '分类2');
-cate.setQuery(query);
-cate.destroy().then(data => {
-  console.log(data);
-});
+console.log(cate);
+
+// const query = new CB.Query(ProductCate);
+// query.equalTo('objectId', 'HyrqbPZ5b');
+// query.equalTo('number', 0);
+//
+// const cate = new ProductCate();
+// cate.id = 'rkWKXVMiZ3';
+// //cate.set('name', '分类2');
+// cate.setQuery(query);
+// cate.destroy().then(data => {
+//   console.log(data);
+// });
 
 // let index = 0;
 // http.createServer( function (req, res) {
