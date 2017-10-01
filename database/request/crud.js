@@ -100,7 +100,7 @@ module.exports = function (CB) {
           }
         }
       }
-    })(_.find(CB.pgConfig.tableList, table => table.name === className), false);
+    })(_.find(CB.pgConfig.tableList, table => table.name === className.split('@_@')[0]), false);
     //处理浮点数数据
     floatColumns.forEach((column) => {
       const origin = row[column.name];
