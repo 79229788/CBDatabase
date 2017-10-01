@@ -60,11 +60,11 @@ module.exports = function (CB) {
     _.each(row, (value, key) => {
       if(_.isArray(value)) {
         value.forEach(item => {
-          compatibleDataType({_: item}, className, selectItems);
+          compatibleDataType({_: item}, className, []);
         });
       }
       if(_.isObject(value) && ['Pointer', 'File'].indexOf(value.__type) > -1 && Object.keys(value).length > 3) {
-        compatibleDataType(value, value.className, selectItems);
+        compatibleDataType(value, value.className, []);
       }
       if(['createdAt', 'updatedAt'].indexOf(key) > -1) {
         row[key] = new Date(value);
@@ -74,8 +74,11 @@ module.exports = function (CB) {
     const floatColumns = [];
     const objectColumns = [];
     const stringColumns = [];
-    CB.pgConfig.tableList.forEach(table => {
-      if(table.name === className.split('@_@')[0]) {
+    (function findColumns(table, isParent) {
+      if(table.parent) {
+        findColumns(_.find(CB.pgConfig.tableList, {name: table.parent}), true);
+      }
+      if(table.name === className.split('@_@')[0] || isParent) {
         for(let column of table.columns) {
           if(selectItems.length > 0 && selectItems.indexOf(column) < 0) continue;
           if(column.type === 'money'
@@ -97,12 +100,12 @@ module.exports = function (CB) {
           }
         }
       }
-    });
+    })(_.find(CB.pgConfig.tableList, table => table.name === className), false);
     //处理浮点数数据
     floatColumns.forEach((column) => {
       const origin = row[column.name];
       if(_.isString(origin) && origin !== '') {
-        const value = origin.replace('$', '');
+        const value = origin.replace('$', '').replace(/,/g, '');
         const number = Number(value);
         row[column.name] = !_.isNaN(number) ? number : value;
       }
@@ -348,13 +351,15 @@ module.exports = function (CB) {
         //*****查询类型
         switch (type) {
           case 'first':
-            skip = 0;
-            limit = 1;
+            opts.skip = 0;
+            opts.limit = 1;
             break;
           case 'count':
             selectClause = `COUNT(1) ${opts.includeCollection.length > 0 ? 'OVER()' : ''}`;
             joinsSelectClause = '';
             orderClause = '';
+            opts.skip = 0;
+            opts.limit = 1;
             break;
         }
         //*****组合成sql语句
@@ -368,8 +373,8 @@ module.exports = function (CB) {
           ${whereClause}
           ${joinsGroupClause}
           ${orderClause}
-          OFFSET ${type === 'count' ? '0' : opts.skip}
-          LIMIT ${type === 'count' ? '1' : opts.limit}
+          OFFSET ${opts.skip}
+          LIMIT ${opts.limit}
         `;
       }else {
         const items = [];

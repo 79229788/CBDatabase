@@ -75,8 +75,14 @@ module.exports = function(CB) {
       throw new Error(`'secret' option is not allowed to be empty.`);
     }
     return function (req, res, next) {
-      //过滤不用验证的请求
-      if((new RegExp(`(\s\S[^${opts.exclude.join('|')}])*(${opts.exclude.join('|')})(\s\S)*`)).test(req.url)) return next();
+      let isDisabled = false;
+      for(let name of opts.exclude) {
+        if(req.url.indexOf(name) > 0) { //过滤不用验证的请求
+          isDisabled = true;
+          break;
+        }
+      }
+      if(isDisabled) return next();
       const keys = new Keygrip([opts.secret]);
       const cookies = new Cookies(req, res, {keys: keys});
       let responseUser = null;

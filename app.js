@@ -27,7 +27,7 @@ CB.initSessionRedis({
   password      : config_redis.redis.sessionRedis.password,
 });
 
-const  http = require('http');
+const http = require('http');
 const Company = CB.Object.extend('Company');
 const Product = CB.Object.extend('Product');
 const ProductCate = CB.Object.extend('ProductCate');
@@ -35,9 +35,16 @@ const ProductPriceMap = CB.Object.extend('ProductPriceMap');
 const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
-const cate = new Company('hsahd');
 
-console.log(cate);
+// const cate = new ProductCate();
+// cate.id = 'Hy8EVjcs-';
+// cate.increment('number', 1);
+//
+// const product = new Product();
+// product.set('name', '产品2');
+// product.set('cate', cate);
+// product.save();
+
 
 // const query = new CB.Query(ProductCate);
 // query.equalTo('objectId', 'HyrqbPZ5b');

@@ -20,12 +20,13 @@ CB.initPG = function (config) {
     printSql : false,
     printSqlParams : false,
     tableList: [],
+    checkTable: false,
   }, config || {});
   CB.pg = new PG.Pool(CB.pgConfig);
   CB.pg.on('error', (error) => {
     console.error('[PG]', error.message);
   });
-  checkTable(CB.pgConfig.tableList || []);
+  if(CB.pgConfig.checkTable) checkTable(CB.pgConfig.tableList || []);
 };
 
 /**
