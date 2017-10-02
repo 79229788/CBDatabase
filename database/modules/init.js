@@ -4,7 +4,6 @@ const PG = require('pg');
 const OSS = require('ali-oss');
 const Redis = require('redis');
 const ossUtils = require('../utils/oss');
-const redisUtils = require('../utils/redis');
 const checkTable = require('../hooks/checkTable');
 /**
  * 初始化默认数据库
@@ -80,19 +79,22 @@ CB.initSessionRedis = function (config) {
   });
   //*****设置临时数据（有过期时间的数据）
   CB.sessionRedis.setTemporary = async function (key, value, expires) {
-    if(!expires) throw new Error('Cannot setTemporary with an empty expires.');
-    expires = new Date(Date.now() + expires);
-    expires = expires.getTime();
-    return await redisUtils.set(CB.sessionRedis, key, `${expires}@_@${value}`);
+    if(!expires) throw new Error('sessionRedis中setTemporary方法的expires参数不能为空');
+    return new Promise((ok, no) => {
+      CB.sessionRedis.psetex(key, expires, value, function (error, data) {
+        if(error) no(error);
+        ok(data);
+      });
+    });
   };
   //*****获取临时数据
   CB.sessionRedis.getTemporary = async function (key) {
-    const origin = await redisUtils.get(CB.sessionRedis, key);
-    if(!origin || origin.indexOf('@_@') < 0) return null;
-    const expires = origin.split('@_@')[0];
-    const value = origin.split('@_@')[1];
-    if((new Date()).getTime() > expires) return null;
-    return value;
+    return new Promise((ok, no) => {
+      CB.sessionRedis.get(key, function (error, data) {
+        if(error) no(error);
+        ok(data);
+      });
+    });
   }
 };
 

@@ -566,7 +566,7 @@ module.exports = function (CB) {
           conditionClauseItems.push(clause);
         });
         if(conditionClauseItems.length > 0) {
-          otherWhereClause = 'AND ' + conditionClauseItems.join(' AND ');
+          otherWhereClause = `${object.objectId ? 'AND ' : ''}${conditionClauseItems.join(' AND ')}`;
         }
       }
 
@@ -581,6 +581,7 @@ module.exports = function (CB) {
       _.each(tmpObject, (value, key) => {
         if(key.indexOf(':[action]') > 0) returningValues.push(`"${key.split(':[action]')[0]}"`);
       });
+      if(!object.objectId) returningValues.push(`"objectId"`);
       const returningClause = returningValues.length > 0 ? `RETURNING ${returningValues.join(',')}` : '';
       let index = 0;
       const sql = `
@@ -613,11 +614,11 @@ module.exports = function (CB) {
         return `"${key}" = $${index}`;
       }).join(',')}
         WHERE
-          "objectId" = $${index + 1}
+          ${object.objectId ? `"objectId" = $${index + 1}` : ''}
           ${otherWhereClause}
         ${returningClause}
       `;
-      const params = _.values(tmpObject).concat([object.objectId]);
+      const params = _.values(tmpObject).concat(object.objectId ? [object.objectId] : []);
       printSql(sql, className, 'update');
       printSqlParams(params, className, 'update');
       const _client = client || await CB.pg.connect();
@@ -633,6 +634,7 @@ module.exports = function (CB) {
                 delete object[key];
               }
             });
+            if(!object.objectId) object.objectId = row.objectId;
           });
         }
         return object;

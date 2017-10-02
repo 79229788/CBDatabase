@@ -20,16 +20,6 @@ module.exports = function (CB) {
     };
   };
   /**
-   * 完全自定义查询
-   * @param sql
-   * @param params
-   * @param client
-   * @return {Promise.<*|Promise.<*>>}
-   */
-  CB.Query.doCloudQuery = async function (sql, params, client) {
-    return await CB.crud.custom(sql, params, client)
-  };
-  /**
    * 用户查询
    * @param childClass
    * @constructor
@@ -49,7 +39,17 @@ module.exports = function (CB) {
       limit: 1000,
     };
   };
-
+  /**
+   * 完全自定义查询
+   * @param sql
+   * @param params
+   * @param client
+   * @return {Promise.<*|Promise.<*>>}
+   */
+  CB.Query.doCloudQuery = async function (sql, params, client) {
+    return await CB.crud.custom(sql, params, client)
+  };
+  
   CB.Query._extend = CB._extend;
 
   /**

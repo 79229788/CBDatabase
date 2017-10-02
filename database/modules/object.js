@@ -31,6 +31,7 @@ module.exports = function (CB) {
   _.extend(CB.Object.prototype, {
     _type: '',
     _className: '',
+    _observeObjectId: true,
     /**
      * 初始化
      */
@@ -331,6 +332,16 @@ module.exports = function (CB) {
      * @return {*}
      */
     save: async function (client) {
+      this._observeObjectId = true;
+      return await CB.Object._deepSaveAsync(this, client);
+    },
+    /**
+     * 更新数据[不根据objectId的更新方式]
+     * @param client
+     * @return {Promise.<void>}
+     */
+    update: async function(client) {
+      this._observeObjectId = false;
       return await CB.Object._deepSaveAsync(this, client);
     },
     /**
@@ -413,14 +424,18 @@ module.exports = function (CB) {
           await child.save(client);
         }else if(child instanceof CB.Object && child.isChanged()) {
           const saveObject = child._toSaveOrigin();
-          const savedData = await CB.crud.save(child.className, saveObject, child._queryCondition, client);
+          const savedData = child._observeObjectId
+            ? await CB.crud.save(child.className, saveObject, child._queryCondition, client)
+            : await CB.crud.update(child.className, saveObject, child._queryCondition, client);
           CB.Object._assignSavedData(savedData, child);
         }
       }
     }
     //***再保存当前模型
     const saveObject = model._toSaveOrigin();
-    const savedData = await CB.crud.save(model.className, saveObject, model._queryCondition, client);
+    const savedData = model._observeObjectId
+      ? await CB.crud.save(model.className, saveObject, model._queryCondition, client)
+      : await CB.crud.update(model.className, saveObject, model._queryCondition, client);
     if(!savedData) return null;
     CB.Object._assignSavedData(savedData, model);
     return model;

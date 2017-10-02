@@ -6,12 +6,13 @@ const config_redis = require('./config/redis');
 const config_tables = require('./config/tables');
 
 CB.initPG({
-  host      : config_postgres.postgres.host,
-  port      : config_postgres.postgres.port,
-  user      : config_postgres.postgres.user,
-  password  : config_postgres.postgres.password,
-  database  : 'erp',
-  tableList : config_tables.tables,
+  host            : config_postgres.postgres.host,
+  port            : config_postgres.postgres.port,
+  user            : config_postgres.postgres.user,
+  password        : config_postgres.postgres.password,
+  database        : 'test',
+  tableList       : config_tables.tables,
+  checkTable      : false,
   printSql        : true,
   printSqlParams  : true
 });
@@ -29,24 +30,18 @@ CB.initSessionRedis({
 
 const http = require('http');
 const Company = CB.Object.extend('Company');
-// const Product = CB.Object.extend('Product');
-// const ProductCate = CB.Object.extend('ProductCate');
-// const ProductPriceMap = CB.Object.extend('ProductPriceMap');
-// const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
-// const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
+const Product = CB.Object.extend('Product');
+const ProductCate = CB.Object.extend('ProductCate');
+const ProductPriceMap = CB.Object.extend('ProductPriceMap');
+const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
+const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
-const StockIn = CB.Object.extend('StockIn');
-const SaleProduct = CB.Object.extend('SaleProduct');
-(async () => {
-  //主查询
-  let query = new CB.Query(StockIn);
-  query.select('details');
-  const stockIn = await query.get('rk7xT3rasW');
-  query = stockIn.get('details').query();
-  const details = await query.find();
-  console.log(details);
-})().catch(error => {
-  console.log(error);
+
+const cate = new ProductCate();
+cate.setQuery(new CB.Query(ProductCate).equalTo('number', 3));
+cate.set('name', '分类a');
+cate.update().then(data => {
+  console.log(data);
 });
 
 

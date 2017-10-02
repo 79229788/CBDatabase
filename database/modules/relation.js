@@ -24,10 +24,14 @@ module.exports = function (CB) {
   };
 
   CB.Relation.prototype = {
+
+    _disabledChildTable: false,
     /**
      * 关闭子表关联（关闭后，请务必保证要保存的主表中有__key字段）
      */
-    _disabledChildTable: false,
+    disabledChildTable: function () {
+      this._disabledChildTable = true;
+    },
     /**
      * 转化为json
      * @return {string}
@@ -96,6 +100,17 @@ module.exports = function (CB) {
       if(!this.key) throw new Error(`[Relation error] the key not find！`);
       const className = this._disabledChildTable ? this.className : `${this.className}@_@${this.relationId}`;
       const query = new CB.Query(className);
+      query.equalTo('__key', this.key);
+      return query;
+    },
+    /**
+     * 获取用户表的查询实例
+     */
+    userQuery: function () {
+      if(!this.className || !this.relationId) throw new Error('[Relation error] the className or relationId not find');
+      if(!this.key) throw new Error(`[Relation error] the key not find！`);
+      const className = this._disabledChildTable ? this.className : `${this.className}@_@${this.relationId}`;
+      const query = new CB.UserQuery(className);
       query.equalTo('__key', this.key);
       return query;
     },
