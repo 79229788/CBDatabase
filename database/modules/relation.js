@@ -31,6 +31,7 @@ module.exports = function (CB) {
      */
     disabledChildTable: function () {
       this._disabledChildTable = true;
+      return this;
     },
     /**
      * 转化为json

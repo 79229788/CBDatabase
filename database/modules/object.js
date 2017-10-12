@@ -86,7 +86,7 @@ module.exports = function (CB) {
      * @param value
      * @return {CB}
      */
-    set: function set(key, value) {
+    set: function (key, value) {
       if(!key) return this;
       let attrs = this.attributes || {};
       if(_.isObject(key)) {
@@ -108,6 +108,16 @@ module.exports = function (CB) {
       delete this.attributes.className;
       delete this.attributes.__type;
       return this;
+    },
+    /**
+     * 取消设置key
+     * @param keys
+     */
+    unset: function (keys) {
+      keys = _.isArray(keys) ? keys : [keys];
+      keys.forEach(key => {
+        delete this.attributes[key];
+      });
     },
     /**
      * 设置增量数据

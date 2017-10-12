@@ -103,10 +103,10 @@ module.exports = function (CB) {
     },
     /**
      * 从缓存服务器移除当前用户
-     * @return {Promise.<CB>}
+     * @return
      */
-    removeCurrentUserFromCache: async function () {
-      await CB.sessionRedis.del(this.id + '@info');
+    removeCurrentUserFromCache: function () {
+      CB.sessionRedis.del(this.id + '@info');
       return this;
     },
     /**
@@ -202,6 +202,8 @@ module.exports = function (CB) {
     logOut: function () {
       if(!this.id) throw new Error('Cannot logOut with an empty id.');
       CB.sessionRedis.del(this.id);
+      this.removeCurrentUserFromCache();
+      return this;
     },
 
   });

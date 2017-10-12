@@ -107,7 +107,6 @@ module.exports = function(CB) {
       res.clearCurrentUser = async function() {
         responseUser = null;
         cookies.set(opts.name, '', opts);
-        await req.currentUser.removeCurrentUserFromCache();
         delete req.currentUser;
         delete req.sessionToken;
       };

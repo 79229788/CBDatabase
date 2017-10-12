@@ -20,7 +20,9 @@ CB.initPG = function (config) {
     printSqlParams : false,
     tableList: [],
     checkTable: false,
+    disabled: false,
   }, config || {});
+  if(CB.pgConfig.disabled) return;
   CB.pg = new PG.Pool(CB.pgConfig);
   CB.pg.on('error', (error) => {
     console.error('[PG]', error.message);
@@ -34,30 +36,16 @@ CB.initPG = function (config) {
  */
 CB.initOSS = function (config) {
   CB.ossConfig = _.extend({
-    region          : '',
+    endpoint        : '',
     accessKeyId     : '',
     accessKeySecret : '',
     bucket          : 'web-user-norm',
+    disabled: false,
   }, config || {});
+  if(CB.ossConfig.disabled) return;
   CB.oss = new OSS(CB.ossConfig);
   CB.oss.uploadBuffer = async function (key, value) {
     return await ossUtils.uploadBuffer(CB.oss, key, value)
-  }
-};
-/**
- * 初始化网站静态资源OSS(CDN源站)
- * @param config
- */
-CB.initStaticOSS = function (config) {
-  CB.staticOSSConfig = _.extend({
-    region          : '',
-    accessKeyId     : '',
-    accessKeySecret : '',
-    bucket          : 'web-static-resource',
-  }, config || {});
-  CB.staticOSS = new OSS(CB.staticOSSConfig);
-  CB.staticOSS.uploadBuffer = async function (key, value) {
-    return await ossUtils.uploadBuffer(CB.staticOSS, key, value)
   }
 };
 
@@ -70,13 +58,12 @@ CB.initSessionRedis = function (config) {
     host: '',
     port: 6379,
     password : '',
+    disabled: false,
   }, config || {});
+  if(CB.sessionRedisConfig.disabled) return;
   const _config = _.clone(CB.sessionRedisConfig);
-  delete _config.password;
+  if(!_config.password) delete _config.password;
   CB.sessionRedis = Redis.createClient(_config);
-  CB.sessionRedis.on('error', (error) => {
-    console.error('[SessionRedis]', error.message);
-  });
   //*****设置临时数据（有过期时间的数据）
   CB.sessionRedis.setTemporary = async function (key, value, expires) {
     if(!expires) throw new Error('sessionRedis中setTemporary方法的expires参数不能为空');

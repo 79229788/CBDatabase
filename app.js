@@ -38,11 +38,14 @@ const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
 const cate = new ProductCate();
-cate.setQuery(new CB.Query(ProductCate).equalTo('number', 3));
-cate.set('name', '分类a');
-cate.update().then(data => {
+cate.save().then(data => {
   console.log(data);
 });
+// cate.setQuery(new CB.Query(ProductCate).equalTo('number', 3));
+// cate.set('name', '分类a');
+// cate.update().then(data => {
+//   console.log(data);
+// });
 
 
 // const cate = new ProductCate();
