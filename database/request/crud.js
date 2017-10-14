@@ -75,6 +75,7 @@ module.exports = function (CB) {
     const objectColumns = [];
     const stringColumns = [];
     (function findColumns(table, isParent) {
+      if(!table) return;
       if(table.parent) {
         findColumns(_.find(CB.pgConfig.tableList, {name: table.parent}), true);
       }
