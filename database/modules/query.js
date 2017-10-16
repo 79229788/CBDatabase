@@ -49,7 +49,7 @@ module.exports = function (CB) {
   CB.Query.doCloudQuery = async function (sql, params, client) {
     return await CB.crud.custom(sql, params, client)
   };
-  
+
   CB.Query._extend = CB._extend;
 
   /**
@@ -138,8 +138,20 @@ module.exports = function (CB) {
     include: function (key, objectClass) {
       if(!objectClass) throw new Error('调用CB.Query的include方法，必须设置第二个参数(objectClass)');
       const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
-      this._queryOptions.includeCollection.push({
-        key: '^' + key,
+      let exist = false, _key = `^${key}`;
+      for(let item of this._queryOptions.includeCollection) {
+        exist = item.key === _key;
+        if(exist) {
+          _.extend(item, {
+            key: _key,
+            type: 'single',
+            className: className
+          });
+          break;
+        }
+      }
+      if(!exist) this._queryOptions.includeCollection.push({
+        key: _key,
         type: 'single',
         className: className
       });
@@ -153,10 +165,22 @@ module.exports = function (CB) {
     includeArray: function (key, objectClass) {
       if(!objectClass) throw new Error('[CB.Query] include方法，必须设置第二个参数(objectClass)');
       const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
-      this._queryOptions.includeCollection.push({
-        key: '^' + key,
+      let exist = false, _key = `^${key}`;
+      for(let item of this._queryOptions.includeCollection) {
+        exist = item.key === _key;
+        if(exist) {
+          _.extend(item, {
+            key: _key,
+            type: 'array',
+            className: className
+          });
+          break;
+        }
+      }
+      if(!exist) this._queryOptions.includeCollection.push({
+        key: _key,
         type: 'array',
-        className: className,
+        className: className
       });
     },
     /**
@@ -175,22 +199,50 @@ module.exports = function (CB) {
     includeQuery: function (key, object) {
       _.remove(this._queryOptions.includeCollection, item => item.key === key);
       if(!(object instanceof CB.InnerQuery)) throw new Error('[CB.Query] matchesQuery方法，查询对象必须使用CB.InnerQuery构建');
-      this._queryOptions.includeCollection.push({
-        key: '^' + key,
+      let exist = false, _key = `^${key}`;
+      for(let item of this._queryOptions.includeCollection) {
+        exist = item.key === _key;
+        if(exist) {
+          _.extend(item, {
+            key: _key,
+            type: 'single',
+            className: object.className,
+            conditionJoins: object._queryOptions.conditionJoins,
+            conditionCollection: object._queryOptions.conditionCollection,
+            orderCollection: object._queryOptions.orderCollection
+          });
+          break;
+        }
+      }
+      if(!exist) this._queryOptions.includeCollection.push({
+        key: _key,
         type: 'single',
         className: object.className,
         conditionJoins: object._queryOptions.conditionJoins,
         conditionCollection: object._queryOptions.conditionCollection,
         orderCollection: object._queryOptions.orderCollection
       });
-      object._queryOptions.includeCollection.forEach(item => {
-        this._queryOptions.includeCollection.push({
-          key: `^${key}.${item.key.replace(/^\^/, '')}`,
-          type: item.type,
-          className: item.className,
+      object._queryOptions.includeCollection.forEach(innerItem => {
+        let exist = false, _key = `^${key}.${innerItem.key.replace(/^\^/, '')}`;
+        for(let outerItem of this._queryOptions.includeCollection) {
+          exist = outerItem.key === _key;
+          if(exist) {
+            _.extend(outerItem, {
+              key: _key,
+              type: innerItem.type,
+              className: innerItem.className,
+            });
+            break;
+          }
+        }
+        if(!exist) this._queryOptions.includeCollection.push({
+          key: _key,
+          type: innerItem.type,
+          className: innerItem.className,
         });
       });
     },
+
     //*****************条件判断集合 start
     //*****************
     _baseCondition: function (key, value, name, type) {
@@ -621,13 +673,6 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     find: async function (client) {
-      if(this.isUnionQuery) {
-        this._unionQueryOptions.queryOptionsCollection.forEach(item => {
-          checkQueryOptions(item);
-        });
-      }else {
-        checkQueryOptions(this._queryOptions);
-      }
       const data = await CB.crud.find(this.className, 'find', this._unionQueryOptions || this._queryOptions, client);
       if(data.length === 0) return [];
       return data.map((item) => {
@@ -647,13 +692,6 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     first: async function (client) {
-      if(this.isUnionQuery) {
-        this._unionQueryOptions.queryOptionsCollection.forEach(item => {
-          checkQueryOptions(item);
-        });
-      }else {
-        checkQueryOptions(this._queryOptions);
-      }
       const data = await CB.crud.find(this.className, 'first', this._unionQueryOptions || this._queryOptions, client);
       if(!data) return null;
       if(this.isUserQuery) {
@@ -671,13 +709,6 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     count: async function (client) {
-      if(this.isUnionQuery) {
-        this._unionQueryOptions.queryOptionsCollection.forEach(item => {
-          checkQueryOptions(item);
-        });
-      }else {
-        checkQueryOptions(this._queryOptions);
-      }
       return await CB.crud.find(this.className, 'count', this._unionQueryOptions || this._queryOptions, client);
     }
   };
@@ -688,24 +719,5 @@ module.exports = function (CB) {
   CB.UnionQueryAnd.prototype = _.clone(CB.Query.prototype);
   CB.UnionQueryAndAll.prototype = _.clone(CB.Query.prototype);
 
-  /**
-   * 检查查询选项
-   */
-  function checkQueryOptions(options) {
-    const countMap = {};
-    for(let item of options.includeCollection){
-      const key = item.key.replace(/^\^/, '');
-      if(countMap[key]){
-        countMap[key] +=1;
-      }else{
-        countMap[key] = 1;
-      }
-    }
-    _.each(countMap, (value, key) => {
-      if(value > 1) {
-        throw new Error(`内嵌查询属性[${key}]存在重复(即重复使用了include或innerQuery)，请检查！`);
-      }
-    });
-  }
 
 };

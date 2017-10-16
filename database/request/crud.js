@@ -218,35 +218,37 @@ module.exports = function (CB) {
     //***主查询
     conditionCollection.forEach((conditionObject) => {
       const clause = Condition(className, conditionObject);
-      if(conditionObject.name) conditionClauseMap[className + conditionObject.name] = clause;
+      if(conditionObject.name) conditionClauseMap[conditionObject.name] = clause;
       conditionClauseItems.push(clause);
     });
-    //处理条件拼接
-    if(conditionJoins && JSON.stringify(conditionClauseMap) !== '{}') {
-
-      _.each(conditionClauseMap, (value, key) => {
-        const reg = new RegExp(key.replace(className, ''), 'g');
-        conditionJoins = conditionJoins.replace(reg, value);
-      });
-      conditionJoinsItems.push('(' + conditionJoins.replace(/&\s*&/g, ' AND ').replace(/\|\s*\|/g, ' OR ') + ')');
-    }
     //***关联查询
     includeCollection.forEach((object) => {
       (object.conditionCollection || []).forEach((conditionObject) => {
         const clause = Condition(object.className, conditionObject);
-        if(conditionObject.name) conditionClauseMap[object.className + conditionObject.name] = clause;
+        if(conditionObject.name) {
+          if(conditionClauseMap[conditionObject.name]) throw new Error('查询条件的name不允许重复[主查询与子查询也不能出现重复]');
+          conditionClauseMap[conditionObject.name] = clause;
+        }
         conditionClauseItems.push(clause);
       });
       //处理条件拼接
       if(object.conditionJoins && JSON.stringify(conditionClauseMap) !== '{}') {
         let conditionJoins = object.conditionJoins;
         _.each(conditionClauseMap, (value, key) => {
-          const reg = new RegExp(key.replace(object.className, ''), 'g');
+          const reg = new RegExp(key, 'g');
           conditionJoins = conditionJoins.replace(reg, value);
         });
-        conditionJoinsItems.push('(' + conditionJoins.replace(/&\s*&/g, ' AND ').replace(/\|\s*\|/g, ' OR ') + ')');
+        conditionJoinsItems.push('(' + conditionJoins.replace(/&&/g, ' AND ').replace(/\|\|/g, ' OR ') + ')');
       }
     });
+    //处理条件拼接
+    if(conditionJoins && JSON.stringify(conditionClauseMap) !== '{}') {
+      _.each(conditionClauseMap, (value, key) => {
+        const reg = new RegExp(key, 'g');
+        conditionJoins = conditionJoins.replace(reg, value);
+      });
+      conditionJoinsItems.push('(' + conditionJoins.replace(/&&/g, ' AND ').replace(/\|\|/g, ' OR ') + ')');
+    }
     if(conditionClauseItems.length > 0) {
       whereClause = 'WHERE ' + conditionClauseItems.join(' AND ');
     }

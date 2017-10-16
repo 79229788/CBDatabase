@@ -37,10 +37,7 @@ const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
 const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
-const cate = new ProductCate();
-cate.save().then(data => {
-  console.log(data);
-});
+
 // cate.setQuery(new CB.Query(ProductCate).equalTo('number', 3));
 // cate.set('name', '分类a');
 // cate.update().then(data => {
@@ -92,18 +89,21 @@ cate.save().then(data => {
 //   res.end();
 // }).listen(3000);
 
-// const query = new CB.Query(Product);
-// query.select('priceMap');
-// query.equalTo('objectId', 'HyHKkbEZcb');
-// //query.include('subCate', ProductCate);
-// query.include('priceMap', ProductPriceMap);
-// // query.includeArray('priceMap.levels', ProductPriceLevel);
-// query.includeArray('priceMap.alones', ProductPriceAlone);
-// query.first().then(function (data) {
-//   console.log(data.get('priceMap').toOrigin());
-// }).catch(function (error) {
-//   console.log(error);
-// });
+
+const innerQuery = new CB.InnerQuery(ProductCate);
+innerQuery.equalTo('name', '分类2', '@2');
+
+const query = new CB.Query(Product);
+query.equalTo('name', '测试', '@1');
+query.includeQuery('cate', innerQuery);
+
+query.conditionJoins('@1 || @2');
+
+query.find().then(function (data) {
+  console.log(data.map(item => item.toOrigin()));
+}).catch(function (error) {
+  console.log(error);
+});
 
 // const query = new CB.Query(Product);
 // query.equalTo('objectId', 'Sy4t1b4bcZ');
