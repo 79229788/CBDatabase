@@ -61,21 +61,21 @@ module.exports = function (className, object) {
     //****************************************JSON类型
     //JSON中的基础运算符判断
     case 'equalInJson':
-      return `"${className}"."${object.key}" ->> '${object.jsonKey}' = '${object.jsonValue}'`;
+      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = '${object.jsonValue}'`;
     case 'equalsInJson':
-      return `"${className}"."${object.key}" ->> '${object.jsonKey}' = ANY(VALUES ${object.jsonValue.map((item) => {
+      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = ANY(VALUES ${object.jsonValue.map((item) => {
         return `('${item.id}')`
       }).join(',')})`;
     case 'notEqualInJson':
-      return `"${className}"."${object.key}" ->> '${object.jsonKey}' != '${object.jsonValue}'`;
+      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} != '${object.jsonValue}'`;
     case 'greaterThanInJson':
-      return `"${className}"."${object.key}" ->> '${object.jsonKey}' > '${object.jsonValue}'`;
+      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} > '${object.jsonValue}'`;
     case 'greaterThanOrEqualInJson':
-      return `"${className}"."${object.key}" ->> '${object.jsonKey}' >= '${object.jsonValue}'`;
+      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} >= '${object.jsonValue}'`;
     case 'lessThanInJson':
-      return `"${className}"."${object.key}" ->> '${object.jsonKey}' < '${object.jsonValue}'`;
+      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} < '${object.jsonValue}'`;
     case 'lessThanOrEqualInJson':
-      return `"${className}"."${object.key}" ->> '${object.jsonKey}' <= '${object.jsonValue}'`;
+      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} <= '${object.jsonValue}'`;
     //JSON中是否存在指定key
     case 'existKeyInJson':
       return `"${className}"."${object.key}" ? '${object.value}'`;
@@ -96,5 +96,17 @@ module.exports = function (className, object) {
       return `"${className}"."${object.key}" IS NOT NULL`;
     case 'notExist':
       return `"${className}"."${object.key}" IS NULL`;
+  }
+
+  /**
+   * 获取json箭头语句
+   * @param jsonKey
+   * @return {string}
+   */
+  function getJsonArrowClause(jsonKey) {
+    const keys = jsonKey.split('.').map(item => `'${item}'`);
+    const lastKey = keys.pop();
+    const startArrow = keys.length > 0 ? ' -> ' : ' ->> ';
+    return startArrow + `${keys.join(' -> ')} ->> ${lastKey}`;
   }
 };

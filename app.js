@@ -38,11 +38,11 @@ const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
 
 
-// cate.setQuery(new CB.Query(ProductCate).equalTo('number', 3));
-// cate.set('name', '分类a');
-// cate.update().then(data => {
-//   console.log(data);
-// });
+const query = new CB.Query(Product);
+query.equalInJson('authData', 'wechat.unionId.a', 'b');
+query.find().then(data => {
+  console.log(data.map(item => item.toOrigin()));
+});
 
 
 // const cate = new ProductCate();
@@ -90,20 +90,20 @@ const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 // }).listen(3000);
 
 
-const innerQuery = new CB.InnerQuery(ProductCate);
-innerQuery.equalTo('name', '分类2', '@2');
-
-const query = new CB.Query(Product);
-query.equalTo('name', '测试', '@1');
-query.includeQuery('cate', innerQuery);
-
-query.conditionJoins('@1 || @2');
-
-query.find().then(function (data) {
-  console.log(data.map(item => item.toOrigin()));
-}).catch(function (error) {
-  console.log(error);
-});
+// const innerQuery = new CB.InnerQuery(ProductCate);
+// innerQuery.equalTo('name', '分类2', '@2');
+//
+// const query = new CB.Query(Product);
+// query.equalTo('name', '测试', '@1');
+// query.includeQuery('cate', innerQuery);
+//
+// query.conditionJoins('@1 || @2');
+//
+// query.find().then(function (data) {
+//   console.log(data.map(item => item.toOrigin()));
+// }).catch(function (error) {
+//   console.log(error);
+// });
 
 // const query = new CB.Query(Product);
 // query.equalTo('objectId', 'Sy4t1b4bcZ');
