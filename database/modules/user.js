@@ -87,7 +87,7 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     saveCurrentUserInCache: async function (maxAge) {
-      await CB.sessionRedis.setTemporary(this.id + '@info', this.toJSON(), maxAge);
+      await CB.sessionRedis.setTemporary(this.id + '@info', this.toJSON(), _.isUndefined(maxAge) ? CB.session.options.maxAge : maxAge);
       return this;
     },
     /**
@@ -98,7 +98,7 @@ module.exports = function (CB) {
     getCurrentUserFromCache: async function (childClass) {
       const data = await CB.sessionRedis.getTemporary(this.id + '@info');
       const user = new CB.User(JSON.parse(data), {serverData: true});
-      user.setChildClass(childClass);
+      user.setChildClass(childClass || this._className);
       return user;
     },
     /**
@@ -108,6 +108,32 @@ module.exports = function (CB) {
     removeCurrentUserFromCache: function () {
       CB.sessionRedis.del(this.id + '@info');
       return this;
+    },
+    /**
+     * 绑定微信授权信息
+     * @param unionId
+     * @param sessionToken
+     */
+    bindWechatAuth: function (unionId, sessionToken) {
+      this._bindPlatformAuthBase('wechat', unionId, sessionToken)
+    },
+    /**
+     * 绑定第三方平台
+     * @param type
+     * @param unionId
+     * @param sessionToken
+     * @return {Promise.<void>}
+     * @private
+     */
+    _bindPlatformAuthBase: async function (type, unionId, sessionToken) {
+      if(!sessionToken) sessionToken = CB.session.generateSessionToken(type, unionId);
+      this.set('authData', {
+        [type]: {
+          unionId: unionId,
+          sessionToken: sessionToken,
+          expires: new Date().getTime() + CB.session.options.maxAge,
+        }
+      });
     },
     /**
      * 注册用户

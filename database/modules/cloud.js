@@ -17,7 +17,7 @@ CB.Cloud = {
       await client.query('COMMIT');
     }catch (error) {
       await client.query('ROLLBACK');
-      throw new Error(error);
+      throw error;
     }finally {
       client.release();
     }
@@ -32,7 +32,7 @@ CB.Cloud = {
     try {
       await cb(client);
     }catch (error) {
-      throw new Error(error);
+      throw error;
     }finally {
       client.release();
     }
