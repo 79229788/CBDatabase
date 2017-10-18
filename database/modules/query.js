@@ -662,10 +662,8 @@ module.exports = function (CB) {
      */
     get: async function (objectId, client) {
       if(!objectId) throw new Error("[CB QUERY ERROR] objectId not found.");
-      const query = new CB.Query(this.className);
-      query._queryOptions = _.cloneDeep(this._queryOptions);
-      query.equalTo('objectId', objectId);
-      return await query.first(client);
+      this.equalTo('objectId', objectId);
+      return await this.first(client);
     },
     /**
      * 获取数据集合
