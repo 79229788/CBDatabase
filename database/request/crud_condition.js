@@ -106,7 +106,7 @@ module.exports = function (className, object) {
   function getJsonArrowClause(jsonKey) {
     const keys = jsonKey.split('.').map(item => `'${item}'`);
     const lastKey = keys.pop();
-    const startArrow = keys.length > 0 ? ' -> ' : ' ->> ';
+    const startArrow = keys.length > 0 ? ' -> ' : '';
     return startArrow + `${keys.join(' -> ')} ->> ${lastKey}`;
   }
 };

@@ -223,6 +223,40 @@ module.exports = function (CB) {
       return await this._loginBase('email', 5003, queryBlock, client);
     },
     /**
+     * 通过微信UnionId登陆
+     * @param unionId
+     * @param queryBlock
+     * @param client
+     * @return {Promise.<void>}
+     */
+    loginWithWechatUnionId: async function (unionId, queryBlock, client) {
+      return await this._loginWithPlatformUnionId('wechat', unionId, queryBlock, client)
+    },
+    /**
+     * 通过平台UnionId登陆
+     * @param type
+     * @param unionId
+     * @param queryBlock
+     * @param client
+     * @return {Promise.<*>}
+     */
+    _loginWithPlatformUnionId: async function (type, unionId, queryBlock, client) {
+      const query = new CB.UserQuery(this.className);
+      query.equalInJson('authData', `${type}.unionId`, unionId);
+      if(queryBlock) queryBlock(query);
+      const user = await query.first(client);
+      if(!user) return null;
+      //获取sessionToken
+      let sessionToken = await CB.sessionRedis.getTemporary(user.id);
+      if(!sessionToken) {
+        sessionToken = CB.session.generateSessionToken(type, unionId);
+        CB.sessionRedis.setTemporary(user.id, sessionToken, CB.session.options.maxAge);
+      }
+      user._sessionToken = sessionToken;
+      return user;
+    },
+
+    /**
      * 退出登陆
      */
     logOut: function () {
@@ -280,6 +314,19 @@ module.exports = function (CB) {
     user.set('email', email);
     user.set('password', password);
     return await user.logInWithEmail(queryBlock, client);
+  };
+  /**
+   * 使用微信UnionId登陆
+   * @param unionId
+   * @param childClass
+   * @param queryBlock
+   * @param client
+   * @return {Promise.<*|Promise.<*|Promise.<void>>>}
+   */
+  CB.User.loginWithWechatUnionId = async function (unionId, childClass, queryBlock, client) {
+    const user = new CB.User();
+    user.setChildClass(childClass);
+    return await user.loginWithWechatUnionId(unionId, queryBlock, client);
   };
   /**
    * 退出登陆
