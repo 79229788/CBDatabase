@@ -27,7 +27,6 @@ module.exports = function (CB) {
     this._previousAttributes = _.cloneDeep(this.attributes);
     this.init.apply(this, arguments);
   };
-
   _.extend(CB.Object.prototype, {
     _type: '',
     _className: '',
@@ -128,10 +127,26 @@ module.exports = function (CB) {
     increment: function (key, value) {
       if(!key) return this;
       if(!_.isNumber(value)) throw new Error('increment value must be number!');
+      if(value === 0) return this;
       delete this.attributes[key];
       this.set(key + ':[action]increment', value);
       return this;
     },
+    /**
+     * 增量日期间隔
+     * @param key
+     * @param value
+     * @param type
+     * @return {CB}
+     */
+    incrementDate: function (key, value, type) {
+      if(!key) return this;
+      if(!_.isNumber(value)) throw new Error('increment value must be number!');
+      delete this.attributes[key];
+      this.set(key + ':[action]incrementDate', `${value} ${type}`);
+      return this;
+    },
+
     /**
      * 给数组属性添加元素(在后面追加)
      * @param key
@@ -181,6 +196,14 @@ module.exports = function (CB) {
       return this;
     },
     /**
+     * 是否包含某属性
+     * @param key
+     * @return {boolean}
+     */
+    has: function (key) {
+      return _.has(this.attributes, key);
+    },
+    /**
      * 创建一个Relation实例
      * @param parentClass Relation的父类(继承类)
      * @param _relationId (可选)自定义子类id
@@ -205,7 +228,23 @@ module.exports = function (CB) {
      * @return {*}
      */
     clone: function() {
-      return _.cloneDeep(this);
+      const origin = CB._decode(this);
+      const reservedMap = {};
+      RESERVED_KEYS.forEach(key => {
+        reservedMap[key] = origin[key];
+        delete origin[key];
+      });
+      const newModel = new this.constructor(origin);
+      _.each(reservedMap, (value, key) => {
+        if(value) {
+          if(key === 'objectId') {
+            newModel.id = value;
+          }else {
+            newModel.attributes[key] = value;
+          }
+        }
+      });
+      return newModel;
     },
     /**
      * 转化为json
@@ -219,7 +258,7 @@ module.exports = function (CB) {
      * @return {object}
      */
     toOrigin: function () {
-      return CB._decode(this);
+      return CB._decode(this, ['password', 'authData']);
     },
     /**
      * 转化为将要保存的原始数据（过滤掉未更新的属性）
@@ -330,6 +369,31 @@ module.exports = function (CB) {
       this._className = _.isString(className) ? className : className.prototype.className;
     },
     /**
+     * 改变为关联子class
+     * @param relationId
+     */
+    relationTo: function (relationId) {
+      this.changeClass(`${this.className}@_@${relationId}`)
+    },
+    /**
+     * 设置归属id，表示使用继承表保存
+     * @param relationId
+     * @param options
+     */
+    belongTo: function (relationId, options) {
+      if(!relationId) return;
+      options = options || [];
+      this._belongTo = `${this.className}@_@${relationId}`;
+      this._belongToOptions = _.isArray(options) ? options : [options];
+    },
+    /**
+     * 设置内部的file归属id，表示使用继承表保存
+     * @param relationId
+     */
+    fileBelongTo: function (relationId) {
+      this._fileBelongTo = relationId;
+    },
+    /**
      * 设置保存时的查询
      * @param query
      */
@@ -338,12 +402,19 @@ module.exports = function (CB) {
       this._queryCondition = query._queryOptions.conditionCollection;
     },
     /**
-     * 保存数据
+     * 设置返回字段[仅在更新时有效]
+     * @param keys
+     */
+    setReturnKeys: function (keys) {
+      this._returnKeys = _.isArray(keys) ? keys : [keys];
+    },
+    /**
+     * 保存数据[通过objectId的存在判断是否更新，还是创建]
      * @return {*}
      */
     save: async function (client) {
       this._observeObjectId = true;
-      return await CB.Object._deepSaveAsync(this, client);
+      return await this._deepSaveAsync(client);
     },
     /**
      * 更新数据[不根据objectId的更新方式]
@@ -352,7 +423,7 @@ module.exports = function (CB) {
      */
     update: async function(client) {
       this._observeObjectId = false;
-      return await CB.Object._deepSaveAsync(this, client);
+      return await this._deepSaveAsync(client);
     },
     /**
      * 删除对象
@@ -360,21 +431,91 @@ module.exports = function (CB) {
      * @return {Promise.<CB>}
      */
     destroy: async function(client) {
+      if(this._belongTo) this.changeClass(this._belongTo);
       return await CB.crud.delete(this.className, {
         objectId: this.id
-      }, this._queryCondition, client);
+      }, this._queryCondition, this._returnKeys, client);
+    },
+    /**
+     * 深度保存对象
+     * @return {Promise.<void>}
+     * @private
+     */
+    _deepSaveAsync: async function (client) {
+      const model = this;
+      try {
+        //***先保存当前模型所有子类
+        const children = model.getChildrenDeep();
+        for(let key of Object.keys(children)) {
+          const childModels = children[key];
+          for(child of childModels) {
+            if(child instanceof CB.File && !child.id) {
+              child.belongTo(model._fileBelongTo);
+              await child.save(client);
+            }else if(child instanceof CB.Object && child.isChanged()) {
+              //若设置了继承归属，先创建字表
+              if(child._belongTo) {
+                const belongToClass = child._belongTo;
+                await CB.table.createChildTable('public', child.className, belongToClass, [
+                  {name: 'objectId', type: 'text', isPrimary: true}
+                ].concat(child._belongToOptions || []), client);
+                child.changeClass(belongToClass);
+              }
+              const saveObject = child._toSaveOrigin();
+              const savedData = child._observeObjectId
+                ? await CB.crud.save(child.className, saveObject, child._queryCondition, child._returnKeys, client)
+                : await CB.crud.update(child.className, saveObject, child._queryCondition, child._returnKeys, client);
+              CB.Object._assignSavedData(savedData, child);
+            }
+          }
+        }
+        //***再保存当前模型
+        //若设置了继承归属，先创建字表
+        if(model._belongTo) {
+          const belongToClass = model._belongTo;
+          await CB.table.createChildTable('public', model.className, belongToClass, [
+            {name: 'objectId', type: 'text', isPrimary: true}
+          ].concat(model._belongToOptions || []), client);
+          model.changeClass(belongToClass);
+        }
+        const saveObject = model._toSaveOrigin();
+        const savedData = model._observeObjectId
+          ? await CB.crud.save(model.className, saveObject, model._queryCondition, model._returnKeys, client)
+          : await CB.crud.update(model.className, saveObject, model._queryCondition, model._returnKeys, client);
+        if(!savedData) return null;
+        CB.Object._assignSavedData(savedData, model);
+      }catch (error) {
+        throw CB.Error(error.code, error.message);
+      }
+      return model;
     },
 
   });
+  /**
+   * 快速创建一个对象子表
+   * @param className
+   * @param relationID
+   * @param client
+   * @return {Promise.<void>}
+   * @constructor
+   */
+  CB.Object.createChildTable = async function (className, relationID, client) {
+    className = _.isString(className) ? className : className.prototype.className;
+    await CB.table.createChildTable('public', className, className + '@_@' + relationID, [
+      {name: 'objectId', type: 'text', isPrimary: true}
+    ], client);
+  };
   /**
    * 保存全部对象
    * @param list
    * @param client
    */
   CB.Object.saveAll = async function (list, client) {
+    const flattenModels = _.flattenDeep(list);
+    if(flattenModels.length === 0) return;
     const savedModels = [];
-    for(let model of _.flattenDeep(list)) {
-      if(model) savedModels.push(await CB.Object._deepSaveAsync(model, client));
+    for(let model of flattenModels) {
+      if(model) savedModels.push(await model._deepSaveAsync(client));
     }
     return savedModels;
   };
@@ -386,17 +527,21 @@ module.exports = function (CB) {
    */
   CB.Object.destroyAll = async function (list, client) {
     const flattenModels = _.flattenDeep(list);
-    const groupModels = _.groupBy(flattenModels, item => item.className);
+    if(flattenModels.length === 0) return;
+    const groupModels = _.groupBy(flattenModels, item => {
+      if(item._belongTo) return item._belongTo;
+      return item.className;
+    });
     for(let className of Object.keys(groupModels)) {
       const items = groupModels[className];
       if(items.length > 1) {
         await CB.crud.delete(className, {
           'objectId:batch': items.map(item => item.id)
-        }, this._queryCondition, client);
+        }, items[0]._queryCondition, items[0]._returnKeys, client);
       }else if(items.length === 1) {
         await CB.crud.delete(className, {
           'objectId': items[0].id
-        }, this._queryCondition, client);
+        }, items[0]._queryCondition, items[0]._returnKeys, client);
       }
     }
   };
@@ -419,38 +564,6 @@ module.exports = function (CB) {
     });
   };
   /**
-   * 深度保存对象(内部所有子对象均为全部保存)
-   * @param model
-   * @param client
-   * @private
-   */
-  CB.Object._deepSaveAsync = async function (model, client) {
-    //***先保存当前模型所有子类
-    const children = model.getChildrenDeep();
-    for(let key of Object.keys(children)) {
-      const childModels = children[key];
-      for(child of childModels) {
-        if(child instanceof CB.File && !child.id) {
-          await child.save(client);
-        }else if(child instanceof CB.Object && child.isChanged()) {
-          const saveObject = child._toSaveOrigin();
-          const savedData = child._observeObjectId
-            ? await CB.crud.save(child.className, saveObject, child._queryCondition, client)
-            : await CB.crud.update(child.className, saveObject, child._queryCondition, client);
-          CB.Object._assignSavedData(savedData, child);
-        }
-      }
-    }
-    //***再保存当前模型
-    const saveObject = model._toSaveOrigin();
-    const savedData = model._observeObjectId
-      ? await CB.crud.save(model.className, saveObject, model._queryCondition, client)
-      : await CB.crud.update(model.className, saveObject, model._queryCondition, client);
-    if(!savedData) return null;
-    CB.Object._assignSavedData(savedData, model);
-    return model;
-  };
-  /**
    * 把已保存的原生服务器数据，传递到模型中(主要是传递objectId和附带特殊动作的属性)
    * @param savedData
    * @param model
@@ -462,9 +575,12 @@ module.exports = function (CB) {
     _.each(model.attributes, (value, key) => {
       if(key.indexOf(':[action]') > 0) {
         const _key = key.split(':[action]')[0];
-        model.attributes[_key] = savedData[_key] || null;
+        model.attributes[_key] = _.has(savedData, _key) ? savedData[_key] : null;
         delete model.attributes[key];
       }
+    });
+    (model._returnKeys || []).forEach((key) => {
+      model.attributes[key] = savedData[key];
     });
     model._previousAttributes = _.cloneDeep(model.attributes);
   };

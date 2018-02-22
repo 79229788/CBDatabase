@@ -4,6 +4,8 @@ const md5 = require('md5');
 module.exports = function (CB) {
 
   CB.User = CB.Object.extend("_User", {
+    _disabledRefreshSessionToken: false,
+    _forceLogin: false,
     /**
      * 设置子类名称
      * @param name
@@ -11,6 +13,19 @@ module.exports = function (CB) {
     setChildClass: function (name) {
       if(!name) return;
       this._className = _.isString(name) ? name : name.prototype.className;
+    },
+    /**
+     * 登陆时禁止刷新SessionToken[卡布账号登陆时]
+     */
+    disabledRefreshSessionToken: function (value = false) {
+      this._disabledRefreshSessionToken = value;
+    },
+    /**
+     * 可强制登录
+     * @param value
+     */
+    forceLogin: function (value = false) {
+      this._forceLogin = value;
     },
     /**
      * 设置会员名
@@ -81,6 +96,32 @@ module.exports = function (CB) {
       const data = await CB.sessionRedis.setTemporary(this.id, sessionToken, CB.session.options.maxAge);
       this._sessionToken = sessionToken;
       return data;
+    },
+    /**
+     * 设置sessionToken[仅仅过期时才设置]
+     * @param key1
+     * @param key2
+     * @return {Promise.<void>}
+     */
+    setSessionToken: async function (key1, key2) {
+      //直接使用未过期的sessionToken
+     let sessionToken = await CB.sessionRedis.getTemporary(this.id);
+      if(!sessionToken) {
+        sessionToken = CB.session.generateSessionToken(key1, key2);
+        await CB.sessionRedis.setTemporary(this.id, sessionToken, CB.session.options.maxAge);
+      }
+      this._sessionToken = sessionToken;
+    },
+    /**
+     * 设置新的sessionToken
+     * @param key1
+     * @param key2
+     * @return {Promise.<void>}
+     */
+    setNewSessionToken: async function (key1, key2) {
+      const sessionToken = CB.session.generateSessionToken(key1, key2);
+      await CB.sessionRedis.setTemporary(this.id, sessionToken, CB.session.options.maxAge);
+      this._sessionToken = sessionToken;
     },
     /**
      * 保存当前用户到缓存服务器（用于高速访问）
@@ -185,15 +226,17 @@ module.exports = function (CB) {
       if(!password) throw new Error('Cannot login with an empty password.');
       const query = new CB.UserQuery(this.className);
       query.equalTo(accountKey, account);
-      query.equalTo('password', md5(password));
+      if(!this._forceLogin) query.equalTo('password', md5(password));
       if(queryBlock) queryBlock(query);
-      const user = await query.first(client);
-      if(!user) throw CB.Error(errorCode, CB.Error.code[errorCode]);
-      //刷新sessionToken
-      const sessionToken = CB.session.generateSessionToken(account, password);
-      CB.sessionRedis.setTemporary(user.id, sessionToken, CB.session.options.maxAge);
-      user._sessionToken = sessionToken;
-      return user;
+      const users = await query.find(client);
+      if(users.length === 0) throw CB.Error(errorCode, CB.Error.code[errorCode]);
+      if(this._disabledRefreshSessionToken) {
+        await users[0].setSessionToken(account, password);
+      }else {
+        await users[0].setNewSessionToken(account, password);
+      }
+      if(users.length === 1) return users[0];
+      return users;
     },
     /**
      * 使用会员名和密码登陆
@@ -244,18 +287,12 @@ module.exports = function (CB) {
       const query = new CB.UserQuery(this.className);
       query.equalInJson('authData', `${type}.unionId`, unionId);
       if(queryBlock) queryBlock(query);
-      const user = await query.first(client);
-      if(!user) return null;
-      //获取sessionToken
-      let sessionToken = await CB.sessionRedis.getTemporary(user.id);
-      if(!sessionToken) {
-        sessionToken = CB.session.generateSessionToken(type, unionId);
-        CB.sessionRedis.setTemporary(user.id, sessionToken, CB.session.options.maxAge);
-      }
-      user._sessionToken = sessionToken;
-      return user;
+      const users = await query.find(client);
+      if(users.length === 0) return null;
+      await users[0].setSessionToken(type, unionId);
+      if(users.length === 1) return users[0];
+      return users;
     },
-
     /**
      * 退出登陆
      */
@@ -273,12 +310,19 @@ module.exports = function (CB) {
    * @param password
    * @param childClass
    * @param queryBlock
+   * @param options
    * @param client
    * @return {Promise.<void>}
    */
-  CB.User.login = async function (username, password, childClass, queryBlock, client) {
+  CB.User.login = async function (username, password, childClass, queryBlock, options, client) {
+    const opts = _.extend({
+      disabledRefreshSessionToken: false,
+      forceLogin: false,
+    }, options);
     const user = new CB.User();
     user.setChildClass(childClass);
+    user.disabledRefreshSessionToken(opts.disabledRefreshSessionToken);
+    user.forceLogin(opts.forceLogin);
     user.set('username', username);
     user.set('password', password);
     return await user.login(queryBlock, client);
@@ -289,12 +333,19 @@ module.exports = function (CB) {
    * @param password
    * @param childClass
    * @param queryBlock
+   * @param options
    * @param client
    * @return {Promise.<*|Promise.<void>>}
    */
-  CB.User.logInWithMobilePhone = async function (mobilePhoneNumber, password, childClass, queryBlock, client) {
+  CB.User.logInWithMobilePhone = async function (mobilePhoneNumber, password, childClass, queryBlock, options, client) {
+    const opts = _.extend({
+      disabledRefreshSessionToken: false,
+      forceLogin: false,
+    }, options);
     const user = new CB.User();
     user.setChildClass(childClass);
+    user.disabledRefreshSessionToken(opts.disabledRefreshSessionToken);
+    user.forceLogin(opts.forceLogin);
     user.set('mobilePhoneNumber', mobilePhoneNumber);
     user.set('password', password);
     return await user.logInWithMobilePhone(queryBlock, client);
@@ -305,12 +356,19 @@ module.exports = function (CB) {
    * @param password
    * @param childClass
    * @param queryBlock
+   * @param options
    * @param client
    * @return {Promise.<*|Promise.<void>>}
    */
-  CB.User.logInWithEmail = async function (email, password, childClass, queryBlock, client) {
+  CB.User.logInWithEmail = async function (email, password, childClass, queryBlock, options, client) {
+    const opts = _.extend({
+      disabledRefreshSessionToken: false,
+      forceLogin: false,
+    }, options);
     const user = new CB.User();
     user.setChildClass(childClass);
+    user.disabledRefreshSessionToken(opts.disabledRefreshSessionToken);
+    user.forceLogin(opts.forceLogin);
     user.set('email', email);
     user.set('password', password);
     return await user.logInWithEmail(queryBlock, client);

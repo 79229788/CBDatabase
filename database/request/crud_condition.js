@@ -3,21 +3,21 @@ module.exports = function (className, object) {
     //**************************************************
     //****************************************基本类型
     case 'equal':
-      return `"${className}"."${object.key}" = '${object.value}'`;
+      return `${getVariableKey(object.key)} = ${getVariableValue(object.value)}`;
     case 'equals':
       return `"${className}"."${object.key}" = ANY(VALUES ${object.value.map((item) => {
         return `('${item}')`
       }).join(',')})`;
     case 'notEqual':
-      return `"${className}"."${object.key}" != '${object.value}'`;
+      return `${getVariableKey(object.key)} != ${getVariableValue(object.value)}`;
     case 'greaterThan':
-      return `"${className}"."${object.key}" > '${object.value}'`;
+      return `${getVariableKey(object.key)} > ${getVariableValue(object.value)}`;
     case 'greaterThanOrEqual':
-      return `"${className}"."${object.key}" >= '${object.value}'`;
+      return `${getVariableKey(object.key)} >= ${getVariableValue(object.value)}`;
     case 'lessThan':
-      return `"${className}"."${object.key}" < '${object.value}'`;
+      return `${getVariableKey(object.key)} < ${getVariableValue(object.value)}`;
     case 'lessThanOrEqual':
-      return `"${className}"."${object.key}" <= '${object.value}'`;
+      return `${getVariableKey(object.key)} <= ${getVariableValue(object.value)}`;
     case 'prefixText':
       return `"${className}"."${object.key}" LIKE '${object.value}%'`;
     case 'suffixText':
@@ -108,5 +108,33 @@ module.exports = function (className, object) {
     const lastKey = keys.pop();
     const startArrow = keys.length > 0 ? ' -> ' : '';
     return startArrow + `${keys.join(' -> ')} ->> ${lastKey}`;
+  }
+  /**
+   * 获取可为变量的值
+   * @param value
+   * @return {string}
+   */
+  function getVariableValue(value) {
+    if(typeof value === 'string' && value.indexOf('${') >= 0 && value.indexOf('}') > 0 ) {
+      return value.replace(/\$\{([\s\S][^\}]*)\}/g, `"${className}"."$1"`);
+    }
+    if(typeof value === 'string' && value.indexOf('$') >= 0 && value.indexOf('{') < 0 && value.indexOf('}') < 0) {
+      return `"${className}"."${value.substr(1)}"`
+    }
+    return `'${value}'`;
+  }
+  /**
+   * 获取可为变量的键
+   * @param key
+   * @return {*}
+   */
+  function getVariableKey(key) {
+    if(key.indexOf('${') >= 0 && key.indexOf('}') > 0 ) {
+      return key.replace(/\$\{([\s\S][^\}]*)\}/g, `"${className}"."$1"`);
+    }
+    if(key.indexOf('$') >= 0 && key.indexOf('{') < 0 && key.indexOf('}') < 0) {
+      return `"${className}"."${key.substr(1)}"`
+    }
+    return `"${className}"."${key}"`;
   }
 };

@@ -39,14 +39,18 @@ CB.initOSS = function (config) {
     endpoint        : '',
     accessKeyId     : '',
     accessKeySecret : '',
-    bucket          : 'web-user-norm',
+    bucket          : '',
+    url             : '',
     disabled: false,
   }, config || {});
   if(CB.ossConfig.disabled) return;
   CB.oss = new OSS(CB.ossConfig);
   CB.oss.uploadBuffer = async function (key, value) {
-    return await ossUtils.uploadBuffer(CB.oss, key, value)
-  }
+    return await ossUtils.uploadBuffer(CB.oss, key, value);
+  };
+  CB.oss.deleteFile = async function (key) {
+    return await ossUtils.deleteFile(CB.oss, key);
+  };
 };
 
 /**

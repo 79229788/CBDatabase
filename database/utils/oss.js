@@ -10,13 +10,26 @@ module.exports = {
    */
   uploadBuffer: function (client, key, value) {
     return new Promise((ok, no) => {
-      try{
-        co(function* () {
-          ok(yield client.put(key, value));
-        });
-      }catch(error) {
+      co(function* () {
+        ok(yield client.put(key, value));
+      }).catch(error => {
         no(error);
-      }
+      });
     });
-  }
+  },
+  /**
+   * OSS删除文件
+   * @param client
+   * @param key
+   * @return {Promise}
+   */
+  deleteFile: function (client, key) {
+    return new Promise((ok, no) => {
+      co(function* () {
+        ok(yield client.delete(key));
+      }).catch(error => {
+        no(error);
+      });
+    });
+  },
 };

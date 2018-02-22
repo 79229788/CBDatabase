@@ -73,6 +73,7 @@ module.exports = function (CB) {
     //搜索需要的列选项
     const floatColumns = [];
     const objectColumns = [];
+    const dateColumns = [];
     const stringColumns = [];
     (function findColumns(table, isParent) {
       if(!table) return;
@@ -81,24 +82,19 @@ module.exports = function (CB) {
       }
       if(table.name === className.split('@_@')[0] || isParent) {
         for(let column of table.columns) {
-          if(selectItems.length > 0 && selectItems.indexOf(column) < 0) continue;
-          if(column.type === 'money'
-            || column.type === 'real'
-            || column.type === 'double'
+          if(selectItems.length > 0 && selectItems.indexOf(column.name) < 0) continue;
+          if(column.type.indexOf('money') === 0
+            || column.type.indexOf('real') === 0
+            || column.type.indexOf('double') === 0
             || column.type.indexOf('numeric') === 0
             || column.type.indexOf('decimal') === 0
-          ) {
-            floatColumns.push(column);
-          }
-          if(column.type === 'object') {
-            objectColumns.push(column);
-          }
+          ) floatColumns.push(column);
+          if(column.type === 'date') dateColumns.push(column);
+          if(column.type === 'object') objectColumns.push(column);
           if(column.type === 'text'
             || column.type.indexOf('char') === 0
             || column.type.indexOf('character') === 0
-          ) {
-            stringColumns.push(column);
-          }
+          ) stringColumns.push(column);
         }
       }
     })(_.find(CB.pgConfig.tableList, table => table.name === className.split('@_@')[0]), false);
@@ -109,6 +105,16 @@ module.exports = function (CB) {
         const value = origin.replace('$', '').replace(/,/g, '');
         const number = Number(value);
         row[column.name] = !_.isNaN(number) ? number : value;
+      }
+      if(_.isArray(origin)) {
+        row[column.name] = origin.map(item => {
+          if(_.isString(item) && item !== '') {
+            const value = item.replace('$', '').replace(/,/g, '');
+            const number = Number(value);
+            return !_.isNaN(number) ? number : value;
+          }
+          return item;
+        });
       }
     });
     //处理对象数据
@@ -123,9 +129,14 @@ module.exports = function (CB) {
       const origin = row[column.name];
       if(!origin) row[column.name] = '';
     });
+    //处理日期数据
+    dateColumns.forEach((column) => {
+      const origin = row[column.name];
+      row[column.name] = origin ? moment(origin).format('YYYY-MM-DD') : '';
+    });
   };
   /**
-   * 处理服务器数据
+   * 处理服务器数据[合并连接字段和处理数据类型]
    * @param rows
    * @param className
    * @param selectItems
@@ -133,6 +144,17 @@ module.exports = function (CB) {
   const handleServerData = (rows, className, selectItems) => {
     rows.forEach((row) => {
       mergeChildren(row);
+      compatibleDataType(row, className, selectItems);
+    });
+  };
+  /**
+   * 仅仅处理服务器数据类型
+   * @param rows
+   * @param className
+   * @param selectItems
+   */
+  const handleServerDataType = (rows, className, selectItems) => {
+    rows.forEach((row) => {
       compatibleDataType(row, className, selectItems);
     });
   };
@@ -258,22 +280,40 @@ module.exports = function (CB) {
     //****************
     //*****排序
     //*****
-    let orderClause = '', orderItems = [];
+    let orderClause = '', orderItems = [], orderTopItems = [], orderBottomItems = [];
     //***主查询
     if(orderCollection.length === 0) {
       //当未指定时，使用默认排序
-      orderItems.push(`"${className}"."createdAt" asc`);
+      if(includeCollection.length === 0) {
+        orderItems.push(`"${className}"."createdAt" asc`);
+      }
     }else {
       orderCollection.forEach((orderObject) => {
-        orderItems.push(`"${className}"."${orderObject.key}" ${orderObject.type}`);
+        const clause = `"${className}"."${orderObject.key}" ${orderObject.type}`;
+        if(orderObject.action === 'top') {
+          orderTopItems.push(clause);
+        }else if(orderObject.action === 'bottom') {
+          orderBottomItems.push(clause);
+        }else {
+          orderItems.push(clause);
+        }
       });
     }
     //***关联查询
     includeCollection.forEach((object) => {
       (object.orderCollection || []).forEach((orderObject) => {
-        orderItems.push(`"${object.className}"."${orderObject.key}" ${orderObject.type}`);
+        const clause = `"${object.className}"."${orderObject.key}" ${orderObject.type}`;
+        if(orderObject.action === 'top') {
+          orderTopItems.push(clause);
+        }else if(orderObject.action === 'bottom') {
+          orderBottomItems.push(clause);
+        }else {
+          orderItems.push(clause);
+        }
       });
     });
+    orderItems.unshift.apply(orderItems, orderTopItems);
+    orderItems.push.apply(orderItems, orderBottomItems);
     if(orderItems.length > 0) orderClause = 'ORDER BY ' + orderItems.join(', ');
 
     return {
@@ -308,6 +348,8 @@ module.exports = function (CB) {
           limit: 1000,
           //***仅仅查询自己（仅仅用于继承表）
           only: false,
+          //***指定列去重（不支持联合查询）
+          distinctKey: '',
           //*** 指定列集合
           //- [[表字段]]
           selectCollection: [],
@@ -358,7 +400,7 @@ module.exports = function (CB) {
             opts.limit = 1;
             break;
           case 'count':
-            selectClause = `COUNT(1) ${opts.includeCollection.length > 0 ? 'OVER()' : ''}`;
+            selectClause = `COUNT(${options.distinctKey ? `DISTINCT "${className}"."${options.distinctKey}"` : '1'}) ${opts.includeCollection.length > 0 ? 'OVER()' : ''}`;
             joinsSelectClause = '';
             orderClause = '';
             opts.skip = 0;
@@ -379,6 +421,25 @@ module.exports = function (CB) {
           OFFSET ${opts.skip}
           LIMIT ${opts.limit}
         `;
+        //如果需要去重，重写sql
+        if(options.distinctKey && type !== 'count') {
+          sql = `
+            SELECT DISTINCT ON ("first"."${options.distinctKey}") *
+            FROM (  
+              SELECT
+                ${selectClause}
+                ${joinsSelectClause}
+              FROM 
+                ${opts.only ? 'ONLY' : ''} "${className}"
+              ${joinsRelationClause}
+              ${whereClause}
+              ${joinsGroupClause}
+              ${orderClause}
+            ) AS "first"
+            OFFSET ${opts.skip}
+            LIMIT ${opts.limit}
+          `;
+        }
       }else {
         const items = [];
         opts.queryOptionsCollection.forEach((item, index) => {
@@ -463,7 +524,7 @@ module.exports = function (CB) {
               return 0;
           }
         }
-        throw new Error(`[DATABASE FIND ERROR] - ${unionClassName || className}: [${error.code || -1}]${error.message}`);
+        throw handleError(error, className);
       }
     },
     /**
@@ -471,23 +532,25 @@ module.exports = function (CB) {
      * @param className
      * @param object
      * @param conditionCollection (仅在更新时有用)
+     * @param returnKeys (仅在更新时有用)
      * @param client
      */
-    save: async function (className, object, conditionCollection, client) {
+    save: async function (className, object, conditionCollection, returnKeys, client) {
       if(object.objectId && ['undefined', 'null', 'false', 'NaN'].indexOf(object.objectId) < 0) {
-        return await this.update(className, object, conditionCollection, client);
+        return await this.update(className, object, conditionCollection, returnKeys, client);
       }else {
-        return await this.create(className, object, client);
+        return await this.create(className, object, returnKeys, client);
       }
     },
     /**
      * 创建数据(不支持创建空数据)
      * @param className
      * @param object
+     * @param returnKeys
      * @param client
      * @return {Promise}
      */
-    create: async function (className, object, client) {
+    create: async function (className, object, returnKeys, client) {
       if(_.size(object) === 0) return;
       _.extend(object, {
         objectId: shortId.generate(),
@@ -504,11 +567,11 @@ module.exports = function (CB) {
         if(key.indexOf(':[action]remove') > 0) delete object.key;
       });
       //指定需要立即返回的字段
-      const returningValues = [];
+      const returningValues = _.clone(returnKeys || []).map(item => `"${item}"`);
       _.each(object, (value, key) => {
         if(key.indexOf(':[action]') > 0) returningValues.push(`"${key.split(':[action]')[0]}"`);
       });
-      const returningClause = returningValues.length > 0 ? `RETURNING ${returningValues.join(',')}` : '';
+      const returningClause = returningValues.length > 0 ? `RETURNING ${ _.uniq(returningValues).join(',')}` : '';
       const sql = `
         INSERT INTO 
           "${className}" ("${
@@ -531,6 +594,7 @@ module.exports = function (CB) {
         const result = await _client.query(sql, params);
         if(result.rowCount === 0) return null;
         if(returningValues.length > 0) {
+          handleServerDataType(result.rows, className, []);
           result.rows.forEach((row) => {
             _.each(object, (value, key) => {
               if(key.indexOf(':[action]') > 0) {
@@ -543,7 +607,7 @@ module.exports = function (CB) {
         }
         return object;
       }catch (error) {
-        throw new Error(`[DATABASE INSERT ERROR] - ${className}: [${error.code || -1}]${error.message}`);
+        throw handleError(error, className);
       }finally {
         if(!client) _client.release();
       }
@@ -553,10 +617,11 @@ module.exports = function (CB) {
      * @param className
      * @param object
      * @param condition
+     * @param returnKeys
      * @param client
      * @return {Promise}
      */
-    update: async function (className, object, condition, client) {
+    update: async function (className, object, condition, returnKeys, client) {
       if(_.size(object) === 0) return;
       //*****获取查询语句
       let otherWhereClause = '';
@@ -579,13 +644,14 @@ module.exports = function (CB) {
       });
       const tmpObject = _.clone(object);
       delete tmpObject.objectId;
+      delete tmpObject['objectId:override'];
       //指定需要立即返回的字段
-      const returningValues = [];
+      const returningValues = _.clone(returnKeys || []).map(item => `"${item}"`);
       _.each(tmpObject, (value, key) => {
         if(key.indexOf(':[action]') > 0) returningValues.push(`"${key.split(':[action]')[0]}"`);
       });
       if(!object.objectId) returningValues.push(`"objectId"`);
-      const returningClause = returningValues.length > 0 ? `RETURNING ${returningValues.join(',')}` : '';
+      const returningClause = returningValues.length > 0 ? `RETURNING ${ _.uniq(returningValues).join(',')}` : '';
       let index = 0;
       const sql = `
         UPDATE 
@@ -594,6 +660,10 @@ module.exports = function (CB) {
           ${_.map(tmpObject, (value, key) => {
         index++;
         //特殊属性处理
+        if(key.indexOf(':[action]incrementDate') > 0) {
+          const _key = key.replace(':[action]incrementDate', '');
+          return `"${_key}" = "${_key}" + INTERVAL $${index}`;
+        }
         if(key.indexOf(':[action]increment') > 0) {
           const _key = key.replace(':[action]increment', '');
           return `"${_key}" = "${_key}" + $${index}`;
@@ -629,20 +699,24 @@ module.exports = function (CB) {
         const result = await _client.query(sql, params);
         if(result.rowCount === 0) return null;
         if(returningValues.length > 0) {
+          handleServerDataType(result.rows, className, []);
           result.rows.forEach((row) => {
             _.each(object, (value, key) => {
               if(key.indexOf(':[action]') > 0) {
                 const _key = key.split(':[action]')[0];
-                object[_key] = row[_key] || null;
+                object[_key] = _.has(row, _key) ? row[_key] : null;
                 delete object[key];
               }
             });
             if(!object.objectId) object.objectId = row.objectId;
+            (returnKeys || []).forEach((key) => {
+              object[key] = row[key];
+            });
           });
         }
         return object;
       }catch (error) {
-        throw new Error(`[DATABASE UPDATE ERROR] - ${className}: [${error.code || -1}]${error.message}`);
+        throw handleError(error, className);
       }finally {
         if(!client) _client.release();
       }
@@ -652,9 +726,10 @@ module.exports = function (CB) {
      * @param className
      * @param idCondition
      * @param otherCondition
+     * @param returnKeys
      * @param client
      */
-    delete: async function (className, idCondition, otherCondition, client) {
+    delete: async function (className, idCondition, otherCondition, returnKeys, client) {
       //*****获取id查询语句
       let index = 0;
       let idWhereClause = '';
@@ -689,12 +764,18 @@ module.exports = function (CB) {
           otherWhereClause = conditionClauseItems.join(' AND ');
         }
       }
-
+      //*****返回字段
+      let returningClause = '';
+      if((returnKeys || []).length > 0) {
+        returnKeys.unshift('objectId');
+        returningClause = `RETURNING ${ _.uniq(returnKeys.map(key => `"${key}"`)).join(',')}`
+      }
       const sql = `
         DELETE FROM 
           "${className}" 
         WHERE 
           ${_.compact([idWhereClause, otherWhereClause]).join(' AND ')}
+        ${returningClause}
       `;
       const params = [];
       _.each(idCondition, (value, key) => {
@@ -712,9 +793,15 @@ module.exports = function (CB) {
       try {
         const result = await _client.query(sql, params);
         if(result.rowCount === 0) return null;
+        if(returningClause) {
+          handleServerDataType(result.rows, className, []);
+          return result.rows;
+        }
         return 'ok';
       }catch (error) {
-        throw new Error(`[DATABASE DELETE ERROR] - ${className}: [${error.code || -1}]${error.message}`);
+        //*****表不存在时，直接返回成本
+        if(error.code === '42P01') return 'ok';
+        throw handleError(error, className);
       }finally {
         if(!client) _client.release();
       }
@@ -731,6 +818,17 @@ module.exports = function (CB) {
       return await _client.query(sql, params)
     },
   };
+  /**
+   * 处理错误
+   * @param error
+   * @param className
+   */
+  function handleError(error, className) {
+    const _error = new Error();
+    _error.code = error.code || -1;
+    _error.message = `[${className}] ${error.message}`;
+    return _error;
+  }
   /**
    * 打印SQL语句
    * @param className

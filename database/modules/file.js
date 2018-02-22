@@ -40,13 +40,13 @@ module.exports = function (CB) {
     return chunks.join("");
   };
 
-  CB.File = function (name, data) {
+  CB.File = function (name, data, mimeType, extName) {
     this.attributes = {
       name: name,
       url: '',
       metaData: {},
       provider: '',
-      mimeType: '',
+      mimeType: mimeType || '',
     };
     if(_.isString(data)) {
       throw new TypeError("Creating an CB.File from a String is not yet supported.");
@@ -56,7 +56,7 @@ module.exports = function (CB) {
       data = { base64: encodeBase64(data) };
     }
     this._data = data;
-    this._extName = '';
+    this._extName = extName || '';
     let owner = null;
     if (data && data.owner) owner = data.owner;
     this.attributes.metaData.owner = owner ? owner.id : 'unknown';
@@ -81,9 +81,22 @@ module.exports = function (CB) {
     file.attributes.provider = 'external';
     return file;
   };
+  /**
+   * 获取指针对象
+   * @param objectId
+   */
+  CB.File.getPointer = function (objectId) {
+    return {
+      __type: "File",
+      className: '_File',
+      objectId: objectId
+    };
+  };
 
   CB.File.prototype = {
     className: '_File',
+
+    rootName: 'files',
 
     /**
      * 获取文件名
@@ -98,7 +111,7 @@ module.exports = function (CB) {
       return this.get('url');
     },
     /**
-     * 获取尺寸
+     * 获取内存大小
      */
     getSize: function () {
       return this.metaData().size;
@@ -132,15 +145,11 @@ module.exports = function (CB) {
       this.attributes.metaData[attr] = value;
     },
     /**
-     * 如果文件是图片，获取图片的缩略图URL。可以传入宽度、高度、质量、格式等参数。
-     * @param width
-     * @param height
-     * @param quality
-     * @param scaleToFit
-     * @param fmt
+     * 设置根目录名
+     * @param name
      */
-    thumbnailURL: function (width, height, quality, scaleToFit, fmt) {
-      return '';
+    setRootName: function (name) {
+      this.rootName = name;
     },
     /**
      * 获取数据
@@ -208,53 +217,70 @@ module.exports = function (CB) {
      * 获取当前的引用对象(无完整数据）
      */
     getPointer: function () {
-      return {
-        __type: "File",
-        className: '_File',
-        objectId: this.id
-      };
+      return CB.File.getPointer(this.id);
     },
     /**
-     *
-     * @private
+     * 设置归属id，表示使用继承表保存
+     * @param relationId
      */
-    _toSaveOrigin: function () {
-
+    belongTo: function (relationId) {
+      if(!relationId) return;
+      this._belongTo = `${this.className}@_@${relationId}`;
     },
-
     /**
      * 保存数据
+     * @param client
      * @return {*}
      */
     save: async function (client) {
-      if(this.id) throw new Error('File already saved. If you want to manipulate a file, use CB.Query to get it.');
+      let fileId = '';
       if(this._data) {
-        let data = this._data;
-        if(data.base64) {
-          data = parseBase64(data.base64);
-        }
-        if(Buffer.isBuffer(data)) {
-          this.attributes.metaData.size = data.length;
-        }
+        let data =  this._data;
+        if(data.base64) data = parseBase64(data.base64);
+        if(Buffer.isBuffer(data)) this.attributes.metaData.size = data.length;
         const typeInfo = fileType(data);
         if(_.isObject(typeInfo) && typeInfo.mime) {
-          this._extName = '.' + typeInfo.ext;
+          this._extName = typeInfo.ext;
           this.set('mimeType', typeInfo.mime);
         }
-        this.id = shortId.generate();
-        const ossCloud = await CB.oss.uploadBuffer(`files/${this.id}${this._extName}`, data);
+        fileId = this.id || shortId.generate();
+        const ossCloud = await CB.oss.uploadBuffer(`${this.rootName}/${fileId}${this._extName ? `.${this._extName}` : ''}`, data);
         if(!ossCloud.url) throw new Error('Upload successful, but unknown reason can not get url');
-        this.set('url', ossCloud.url);
+        const url = CB.ossConfig.url ? `${CB.ossConfig.url}/${ossCloud.name}` : ossCloud.url;
+        this.set('url', url);
         this.set('provider', 'oss');
       }
       const unsaved = this.toOrigin();
+      if(fileId) unsaved['objectId:override'] = fileId;
       delete unsaved.__type;
       delete unsaved.className;
-      delete unsaved.objectId;
-      const saved = await CB.crud.save('_File', unsaved, null, client);
+      if(this._belongTo) {
+        await CB.table.createChildTable('public', this.className, this._belongTo, [
+          {name: 'objectId', type: 'text', isPrimary: true}
+        ], client);
+        this.className = this._belongTo;
+      }
+      const saved = await CB.crud.save(this.className, unsaved, null, null, client);
       this.id = saved.objectId;
       return this;
     },
+    /**
+     * 删除文件
+     * @param suffix
+     * @param client
+     * @return {*}
+     */
+    destroy: async function (suffix, client) {
+      if(!this.id) throw new Error('待删除的文件必须指定其objectId！');
+      if(this._belongTo) this.className = this._belongTo;
+      //***从数据库中删除
+      await CB.crud.delete(this.className, {
+        objectId: this.id
+      }, null, client);
+      //***从oss中删除
+      await CB.oss.deleteFile(`${this.rootName}/${this.id}.${suffix}`);
+      return 'ok';
+    }
   };
 
 };

@@ -127,12 +127,13 @@ CB._encode = function (object, key) {
 /**
  * 解析对象（CBObject || CBFile 转化为 普通对象）
  * @param object  CBObject
+ * @param hiddenFields 需要屏蔽删除敏感字段
  * @return {*}
  * @private
  */
-CB._decode = function (object) {
+CB._decode = function (object, hiddenFields) {
   if(_.isDate(object)) return CB._parseDate(object);
-  if(_.isArray(object)) return _.map(object, child => CB._decode(child));
+  if(_.isArray(object)) return _.map(object, child => CB._decode(child, hiddenFields));
   if(object instanceof CB.Object || object instanceof CB.File) {
     const origin = _.extend(object.getPointer(), object.attributes);
     if(object.id) {
@@ -140,13 +141,13 @@ CB._decode = function (object) {
     }else {
       delete origin.objectId;
     }
-    //删除敏感字段（自定义字段请不要与其冲突，否则一并删除）
-    delete origin.password;
-    delete origin.authData;
-    return CB._decode(origin);
+    (hiddenFields || []).forEach(key => {
+      delete origin[key];
+    });
+    return CB._decode(origin, hiddenFields);
   }
   if(object instanceof CB.Relation) return object.toOrigin();
-  if(_.isObject(object)) return _.mapValues(object, value => CB._decode(value));
+  if(_.isObject(object)) return _.mapValues(object, value => CB._decode(value, hiddenFields));
   return object;
 };
 

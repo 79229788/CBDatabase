@@ -74,24 +74,26 @@ module.exports = function (CB) {
       }
       const parentClassName = this.className;
       let relationClassName = `${this.className}@_@${this.relationId}`;
-      if(!this._disabledChildTable) {
-        await CB.table.createChildTable('public', parentClassName, relationClassName, [
-          {name: 'objectId', type: 'text', isPrimary: true},
-          {name: '__key', type: 'text'},
-        ], client);
-        this.key = shortId.generate();
-      }else {
-        relationClassName = this.className;
-        this.key = this.relationId;
+      if(!this.key) {
+        if(!this._disabledChildTable) {
+          await CB.table.createChildTable('public', parentClassName, relationClassName, [
+            {name: 'objectId', type: 'text', isPrimary: true},
+            {name: '__key', type: 'text'},
+          ], client);
+          this.key = shortId.generate();
+        }else {
+          relationClassName = this.className;
+          this.key = this.relationId;
+        }
       }
-      const unsavedModels = [];
+      const savedModels = [];
       for(let model of objects) {
         model._className = relationClassName;
         model.set('__key', this.key);
-        await CB.Object._deepSaveAsync(model, client);
-        unsavedModels.push(model);
+        await model._deepSaveAsync(client);
+        savedModels.push(model);
       }
-      return unsavedModels;
+      return savedModels;
     },
     /**
      * 获取查询实例

@@ -4,6 +4,7 @@ const config_postgres = require('./config/postgres');
 const config_oss = require('./config/oss');
 const config_redis = require('./config/redis');
 const config_tables = require('./config/tables');
+const http = require('http');
 
 CB.initPG({
   host            : config_postgres.postgres.host,
@@ -12,9 +13,9 @@ CB.initPG({
   password        : config_postgres.postgres.password,
   database        : 'test',
   tableList       : config_tables.tables,
-  checkTable      : false,
-  printSql        : true,
-  printSqlParams  : true
+  checkTable      : true,
+  printSql        : false,
+  printSqlParams  : false
 });
 CB.initOSS({
   region          : config_oss.oss.region,
@@ -28,22 +29,63 @@ CB.initSessionRedis({
   password      : config_redis.redis.sessionRedis.password,
 });
 
-const http = require('http');
-const Company = CB.Object.extend('Company');
-const Product = CB.Object.extend('Product');
-const ProductCate = CB.Object.extend('ProductCate');
-const ProductPriceMap = CB.Object.extend('ProductPriceMap');
-const ProductPriceLevel = CB.Object.extend('ProductPriceLevel');
-const ProductPriceAlone = CB.Object.extend('ProductPriceAlone');
 
+const TableA = CB.Object.extend('TableA');
+const TableB = CB.Object.extend('TableB');
+const Table1 = CB.Object.extend('Table1');
+const Table2 = CB.Object.extend('Table2');
+const Table3 = CB.Object.extend('Table3');
+const Table4 = CB.Object.extend('Table4');
 
+async function task1(client) {
+  const table1 = new Table1();
+  table1.belongTo('task1');
+  table1.set('name', '表1-1');
+  table1.set('number', 11);
 
-const query = new CB.Query(Product);
-query.equalInJson('authData', 'wechat.unionId.a', 'b');
-query.find().then(data => {
-  console.log(data.map(item => item.toOrigin()));
+  const table2 = new Table2();
+  table2.belongTo('task1');
+  table2.set('name', '表2-1');
+  table2.set('number', 21);
+
+  const tableA = new TableA();
+  tableA.belongTo('task1');
+  tableA.set('name', '表A-1');
+  tableA.set('number', 101);
+  tableA.set('table1', table1);
+  tableA.set('table2', table2);
+  await tableA.save(client);
+}
+
+async function task2() {
+  CB.Cloud.Batch(async (client) => {
+    const table3 = new Table3();
+    table3.set('name', '表3-2');
+    table3.set('number', 32);
+
+    const table4 = new Table3();
+    table4.set('name', '表4-2');
+    table4.set('number', 42);
+
+    const tableB = new TableB();
+    tableB.set('name', '表A-2');
+    tableB.set('number', 102);
+    tableB.set('table3', table3);
+    tableB.set('table4', table4);
+    await tableB.save(client);
+  });
+
+}
+
+CB.Cloud.Transaction(async (client) => {
+  for(let i = 0; i < 1000; i++) {
+    task2();
+    await task1(client);
+  }
+  console.log('success');
+}).catch(error => {
+  console.log('error');
 });
-
 
 // const cate = new ProductCate();
 // cate.id = 'Hy8EVjcs-';

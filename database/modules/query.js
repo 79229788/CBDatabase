@@ -4,12 +4,15 @@ module.exports = function (CB) {
   /**
    * 通用查询
    * @param objectClass
+   * @param relationId
    * @constructor
    */
-  CB.Query = function (objectClass) {
-    this.className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+  CB.Query = function (objectClass, relationId) {
+    if(objectClass) this.className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+    if(relationId) this.className += '@_@' + relationId;
     this._queryOptions = {
       only: false,
+      distinctKey: '',
       selectCollection: [],
       includeCollection: [],
       conditionCollection: [],
@@ -22,14 +25,19 @@ module.exports = function (CB) {
   /**
    * 用户查询
    * @param childClass
+   * @param relationId
    * @constructor
    */
-  CB.UserQuery = function (childClass) {
+  CB.UserQuery = function (childClass, relationId) {
     this.className = '_User';
     this.isUserQuery = true;
-    if(childClass) this.className = _.isString(childClass) ? childClass : childClass.prototype.className;
+    if(childClass) {
+      this.className = _.isString(childClass) ? childClass : childClass.prototype.className;
+      if(relationId) this.className += '@_@' + relationId;
+    }
     this._queryOptions = {
       only: false,
+      distinctKey: '',
       selectCollection: [],
       includeCollection: [],
       conditionCollection: [],
@@ -55,10 +63,12 @@ module.exports = function (CB) {
   /**
    * 内建查询
    * @param objectClass
+   * @param relationId
    * @constructor
    */
-  CB.InnerQuery = function (objectClass) {
+  CB.InnerQuery = function (objectClass, relationId) {
     this.className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+    if(relationId) this.className += '@_@' + relationId;
     this.isInnerQuery = true;
     this._queryOptions = {
       includeCollection: [],
@@ -70,11 +80,14 @@ module.exports = function (CB) {
   /**
    * 联合查询
    * @param objectClass
+   * @param relationId
    * @constructor
    */
-  CB.UnionQuery = function (objectClass) {
+  CB.UnionQuery = function (objectClass, relationId) {
+    let className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+    if(relationId) className += '@_@' + relationId;
     this._queryOptions = {
-      className: _.isString(objectClass) ? objectClass : objectClass.prototype.className,
+      className: className,
       only: false,
       selectCollection: [],
       includeCollection: [],
@@ -123,6 +136,13 @@ module.exports = function (CB) {
       this._queryOptions.only = true;
     },
     /**
+     * 指定列去重[指定列必须是本表，不能是关联表中的列]（不支持联合查询）
+     * @param key
+     */
+    distinctOn: function (key) {
+      this._queryOptions.distinctKey = key;
+    },
+    /**
      * 查询指定列
      * @param keys
      */
@@ -134,10 +154,12 @@ module.exports = function (CB) {
      * @param key 查询字段（支持5层嵌套，嵌套连接请使用"."）
      * 例如：product.cate.user
      * @param objectClass
+     * @param relationId
      */
-    include: function (key, objectClass) {
+    include: function (key, objectClass, relationId) {
       if(!objectClass) throw new Error('调用CB.Query的include方法，必须设置第二个参数(objectClass)');
-      const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+      let className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+      if(relationId) className += '@_@' + relationId;
       let exist = false, _key = `^${key}`;
       for(let item of this._queryOptions.includeCollection) {
         exist = item.key === _key;
@@ -161,10 +183,12 @@ module.exports = function (CB) {
      * @param key 查询字段（支持5层嵌套，嵌套连接请使用"."）
      * 例如：product.cate.levels，该类型只能作为最后一层出现
      * @param objectClass
+     * @param relationId
      */
-    includeArray: function (key, objectClass) {
+    includeArray: function (key, objectClass, relationId) {
       if(!objectClass) throw new Error('[CB.Query] include方法，必须设置第二个参数(objectClass)');
-      const className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+      let className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
+      if(relationId) className += '@_@' + relationId;
       let exist = false, _key = `^${key}`;
       for(let item of this._queryOptions.includeCollection) {
         exist = item.key === _key;
@@ -186,9 +210,18 @@ module.exports = function (CB) {
     /**
      * 内嵌查询文件
      * @param key
+     * @param relationId
      */
-    includeFile: function (key) {
-      this.include(key, '_File');
+    includeFile: function (key, relationId) {
+      this.include(key, '_File', relationId);
+    },
+    /**
+     * 内嵌查询文件
+     * @param key
+     * @param relationId
+     */
+    includeFiles: function (key, relationId) {
+      this.includeArray(key, '_File', relationId);
     },
     /**
      * 内嵌查询[高级版：同简易版，并额外支持条件查询和指定排序]
@@ -201,8 +234,8 @@ module.exports = function (CB) {
       if(!(object instanceof CB.InnerQuery)) throw new Error('[CB.Query] matchesQuery方法，查询对象必须使用CB.InnerQuery构建');
       let exist = false, _key = `^${key}`;
       for(let item of this._queryOptions.includeCollection) {
-        exist = item.key === _key;
-        if(exist) {
+        if(item.key === _key) {
+          exist = true;
           _.extend(item, {
             key: _key,
             type: 'single',
@@ -225,8 +258,8 @@ module.exports = function (CB) {
       object._queryOptions.includeCollection.forEach(innerItem => {
         let exist = false, _key = `^${key}.${innerItem.key.replace(/^\^/, '')}`;
         for(let outerItem of this._queryOptions.includeCollection) {
-          exist = outerItem.key === _key;
-          if(exist) {
+          if(outerItem.key === _key) {
+            exist = true;
             _.extend(outerItem, {
               key: _key,
               type: innerItem.type,
@@ -619,22 +652,26 @@ module.exports = function (CB) {
     /**
      * 正排序
      * @param key
+     * @param action [top：置顶 | bottom：置底]
      */
-    ascending: function (key) {
+    ascending: function (key, action) {
       this._queryOptions.orderCollection.push({
         key: key,
-        type: 'asc'
+        type: 'asc',
+        action: action
       });
       return this;
     },
     /**
      * 倒排序
      * @param key
+     * @param action [top：置顶 | bottom：置底]
      */
-    descending: function (key) {
+    descending: function (key, action) {
       this._queryOptions.orderCollection.push({
         key: key,
-        type: 'desc'
+        type: 'desc',
+        action: action
       });
       return this;
     },
