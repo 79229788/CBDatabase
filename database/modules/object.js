@@ -455,11 +455,10 @@ module.exports = function (CB) {
             }else if(child instanceof CB.Object && child.isChanged()) {
               //若设置了继承归属，先创建字表
               if(child._belongTo) {
-                const belongToClass = child._belongTo;
-                await CB.table.createChildTable('public', child.className, belongToClass, [
+                await CB.table.createChildTable('public', child.className, child._belongTo, [
                   {name: 'objectId', type: 'text', isPrimary: true}
                 ].concat(child._belongToOptions || []), client);
-                child.changeClass(belongToClass);
+                child.changeClass(child._belongTo);
               }
               const saveObject = child._toSaveOrigin();
               const savedData = child._observeObjectId
@@ -472,11 +471,10 @@ module.exports = function (CB) {
         //***再保存当前模型
         //若设置了继承归属，先创建字表
         if(model._belongTo) {
-          const belongToClass = model._belongTo;
-          await CB.table.createChildTable('public', model.className, belongToClass, [
+          await CB.table.createChildTable('public', model.className, model._belongTo, [
             {name: 'objectId', type: 'text', isPrimary: true}
           ].concat(model._belongToOptions || []), client);
-          model.changeClass(belongToClass);
+          model.changeClass(model._belongTo);
         }
         const saveObject = model._toSaveOrigin();
         const savedData = model._observeObjectId
