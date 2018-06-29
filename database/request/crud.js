@@ -244,7 +244,7 @@ module.exports = function (CB) {
       const condition = Condition(className, conditionObject, conditionIndex);
       if(conditionObject.name) conditionClauseMap[conditionObject.name] = condition.clause;
       conditionClauseItems.push(condition.clause);
-      if(condition.value) conditionClauseValues.push(condition.value);
+      if(!_.isUndefined(condition.value)) conditionClauseValues.push(condition.value);
       conditionIndex = condition.index;
       conditionIndex ++;
     });
@@ -257,7 +257,7 @@ module.exports = function (CB) {
           conditionClauseMap[conditionObject.name] = condition.clause;
         }
         conditionClauseItems.push(condition.clause);
-        if(condition.value) conditionClauseValues.push(condition.value);
+        if(!_.isUndefined(condition.value)) conditionClauseValues.push(condition.value);
         conditionIndex = condition.index;
         conditionIndex ++;
       });

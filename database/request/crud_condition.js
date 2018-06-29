@@ -15,10 +15,9 @@ module.exports = function (className, object, index) {
       }
       break;
     case 'equals':
-      res.clause = `"${className}"."${object.key}" = ANY(VALUES ${object.value.map((item) => {
-        return `('${item}')`
-      }).join(',')})`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" = ANY($${index + 1})`;
+      res.value = object.value;
+      res.index = index;
       break;
     case 'notEqual':
       if(variableValue.isVariable) {
@@ -91,33 +90,39 @@ module.exports = function (className, object, index) {
     //****************************************数组类型
     //数组元素全包含
     case 'containsAllArray':
-      res.clause = `"${className}"."${object.key}" = '{"${object.value.join('","')}"}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" = $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
     //包含数组元素
     case 'containsInArray':
-      res.clause = `"${className}"."${object.key}" @> '{"${object.value.join('","')}"}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" @> $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
     //数组元素被包含
     case 'containedByArray':
-      res.clause = `"${className}"."${object.key}" <@ '{"${object.value.join('","')}"}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" <@ $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
     //数组元素有重叠
     case 'overlapInArray':
-      res.clause = `"${className}"."${object.key}" && '{"${object.value.join('","')}"}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" && $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
     //数组元素全不包含
     case 'notContainAllArray':
-      res.clause = `"${className}"."${object.key}" <> '{"${object.value.join('","')}"}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" <> $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
     //数组元素不被包含
     case 'notContainInArray':
-      res.clause = `NOT ('${object.value}' = ANY("${className}"."${object.key}"))`;
-      res.index = index - 1;
+      res.clause = `NOT ($${index + 1} = ANY("${className}"."${object.key}"))`;
+      res.value = object.value;
+      res.index = index;
       break;
     //匹配数组长度
     case 'lengthInArray':
@@ -127,8 +132,9 @@ module.exports = function (className, object, index) {
         OR ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = 0)
         `;
       }
-      res.clause = `ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = ${object.value}`;
-      res.index = index - 1;
+      res.clause = `ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
 
 
@@ -141,53 +147,62 @@ module.exports = function (className, object, index) {
       res.index = index;
       break;
     case 'equalsInJson':
-      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = ANY(VALUES ${object.jsonValue.map((item) => {
-        return `('${item.id}')`
-      }).join(',')})`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = ANY($${index + 1})`;
+      res.value = object.jsonValue.map(item => item.id);
+      res.index = index;
       break;
     case 'notEqualInJson':
-      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} != '${object.jsonValue}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} != $${index + 1}`;
+      res.value = object.jsonValue;
+      res.index = index;
       break;
     case 'greaterThanInJson':
-      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} > '${object.jsonValue}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} > $${index + 1}`;
+      res.value = object.jsonValue;
+      res.index = index;
       break;
     case 'greaterThanOrEqualInJson':
-      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} >= '${object.jsonValue}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} >= $${index + 1}`;
+      res.value = object.jsonValue;
+      res.index = index;
       break;
     case 'lessThanInJson':
-      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} < '${object.jsonValue}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} < $${index + 1}`;
+      res.value = object.jsonValue;
+      res.index = index;
       break;
     case 'lessThanOrEqualInJson':
-      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} <= '${object.jsonValue}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} <= $${index + 1}`;
+      res.value = object.jsonValue;
+      res.index = index;
       break;
     //JSON中是否存在指定key
     case 'existKeyInJson':
-      res.clause = `"${className}"."${object.key}" ? '${object.value}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" ? $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
     //JSON中是否存在多个key中的任意一个
     case 'existAnyKeysInJson':
-      res.clause = `"${className}"."${object.key}" ?| '${object.value}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" ?| $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
     //JSON中是否存在指定的全部key
     case 'existAllKeysInJson':
-      res.clause = `"${className}"."${object.key}" ?& '${object.value}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" ?& $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
     case 'containsInJson':
-      res.clause = `"${className}"."${object.key}" @> '${object.value}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" @> $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
     case 'containedByJson':
-      res.clause = `"${className}"."${object.key}" <@ '${object.value}'`;
-      res.index = index - 1;
+      res.clause = `"${className}"."${object.key}" <@ $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
       break;
 
     //**************************************************

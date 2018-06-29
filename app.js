@@ -5,6 +5,7 @@ const config_oss = require('./config/oss');
 const config_redis = require('./config/redis');
 const config_tables = require('./config/tables');
 const http = require('http');
+const moment = require('moment');
 
 CB.initPG({
   host            : config_postgres.postgres.host,
@@ -28,5 +29,79 @@ CB.initSessionRedis({
   port          : config_redis.redis.sessionRedis.port,
   password      : config_redis.redis.sessionRedis.password,
 });
+
+const Table1 = CB.Object.extend('Table1');
+const Table2 = CB.Object.extend('Table2');
+const Table3 = CB.Object.extend('Table3');
+
+//******************** 测试数据创建
+//********************
+// const table3 = new Table3();
+// table3.set('name', '表格三');
+// table3.set('time', moment().format('YYYY-MM-DD HH:mm:ss'));
+// table3.set('boolean', true);
+// table3.set('number', 30);
+// table3.set('array', ['i', 'j', 'k', 'l']);
+//
+// const table2 = new Table2();
+// table2.set('name', '表格二');
+// table2.set('time', moment().format('YYYY-MM-DD HH:mm:ss'));
+// table2.set('boolean', false);
+// table2.set('number', 20);
+// table2.set('array', ['e', 'f', 'g', 'h']);
+// table2.set('table', table3);
+//
+// const table1 = new Table1();
+// table1.set('name', '表格一');
+// table1.set('time', moment().format('YYYY-MM-DD HH:mm:ss'));
+// table1.set('boolean', true);
+// table1.set('number', 10);
+// table1.set('array', ['a', 'b', 'c', 'd']);
+// table1.set('table', table2);
+//
+// table1.save().then(data => {
+//   console.log(data);
+// }).catch(error => {
+//   console.log(error);
+// });
+
+
+//******************** 测试数据查询
+//********************
+//********关联查询
+// const query = new CB.Query(Table1);
+// query.equalTo('name', '表格一');
+// query.equalTo('boolean', true);
+// query.include('table', Table2);
+// query.include('table.table', Table3);
+// query.first().then(data => {
+//   if(!data) return console.log('未查询到数据');
+//   console.log(data.toOrigin());
+// }).catch(error => {
+//   console.log(error);
+// });
+
+
+//********内嵌查询
+// //内嵌查询
+// const innerQuery = new CB.InnerQuery(Table2);
+// innerQuery.equalTo('name', '表格二2');
+// innerQuery.equalTo('boolean', false);
+// //主查询
+// const query = new CB.Query(Table1);
+// query.equalTo('name', '表格一');
+// query.equalTo('boolean', true);
+// query.includeQuery('table', innerQuery);
+// query.first().then(data => {
+//   if(!data) return console.log('未查询到数据');
+//   console.log(data.toOrigin());
+// }).catch(error => {
+//   console.log(error);
+// });
+
+
+
+
+
 
 
