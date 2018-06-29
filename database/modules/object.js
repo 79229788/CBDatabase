@@ -570,6 +570,8 @@ module.exports = function (CB) {
   CB.Object._assignSavedData = function (savedData, model) {
     if(!savedData || JSON.stringify(savedData) === '{}') return;
     model.id = savedData.objectId;
+    model.attributes.createdAt = savedData.createdAt;
+    model.attributes.updatedAt = savedData.updatedAt;
     _.each(model.attributes, (value, key) => {
       if(key.indexOf(':[action]') > 0) {
         const _key = key.split(':[action]')[0];

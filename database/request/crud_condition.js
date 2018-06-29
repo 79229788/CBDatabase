@@ -1,103 +1,207 @@
-module.exports = function (className, object) {
+module.exports = function (className, object, index) {
+  const res = {};
+  const variableValue = getVariableValue(object.value);
   switch (object.type) {
     //**************************************************
     //****************************************基本类型
     case 'equal':
-      return `${getVariableKey(object.key)} = ${getVariableValue(object.value)}`;
+      if(variableValue.isVariable) {
+        res.clause = `${getVariableKey(object.key)} = ${variableValue.value}`;
+        res.index = index - 1;
+      }else {
+        res.clause = `${getVariableKey(object.key)} = $${index + 1}`;
+        res.value = object.value;
+        res.index = index;
+      }
+      break;
     case 'equals':
-      return `"${className}"."${object.key}" = ANY(VALUES ${object.value.map((item) => {
+      res.clause = `"${className}"."${object.key}" = ANY(VALUES ${object.value.map((item) => {
         return `('${item}')`
       }).join(',')})`;
+      res.index = index - 1;
+      break;
     case 'notEqual':
-      return `${getVariableKey(object.key)} != ${getVariableValue(object.value)}`;
+      if(variableValue.isVariable) {
+        res.clause = `${getVariableKey(object.key)} != ${variableValue.value}`;
+        res.index = index - 1;
+      }else {
+        res.clause = `${getVariableKey(object.key)} != $${index + 1}`;
+        res.value = object.value;
+        res.index = index;
+      }
+      break;
     case 'greaterThan':
-      return `${getVariableKey(object.key)} > ${getVariableValue(object.value)}`;
+      if(variableValue.isVariable) {
+        res.clause = `${getVariableKey(object.key)} > ${variableValue.value}`;
+        res.index = index - 1;
+      }else {
+        res.clause = `${getVariableKey(object.key)} > $${index + 1}`;
+        res.value = object.value;
+        res.index = index;
+      }
+      break;
     case 'greaterThanOrEqual':
-      return `${getVariableKey(object.key)} >= ${getVariableValue(object.value)}`;
+      if(variableValue.isVariable) {
+        res.clause = `${getVariableKey(object.key)} >= ${variableValue.value}`;
+        res.index = index - 1;
+      }else {
+        res.clause = `${getVariableKey(object.key)} >= $${index + 1}`;
+        res.value = object.value;
+        res.index = index;
+      }
+      break;
     case 'lessThan':
-      return `${getVariableKey(object.key)} < ${getVariableValue(object.value)}`;
+      if(variableValue.isVariable) {
+        res.clause = `${getVariableKey(object.key)} < ${variableValue.value}`;
+        res.index = index - 1;
+      }else {
+        res.clause = `${getVariableKey(object.key)} < $${index + 1}`;
+        res.value = object.value;
+        res.index = index;
+      }
+      break;
     case 'lessThanOrEqual':
-      return `${getVariableKey(object.key)} <= ${getVariableValue(object.value)}`;
+      if(variableValue.isVariable) {
+        res.clause = `${getVariableKey(object.key)} <= ${variableValue.value}`;
+        res.index = index - 1;
+      }else {
+        res.clause = `${getVariableKey(object.key)} <= $${index + 1}`;
+        res.value = object.value;
+        res.index = index;
+      }
+      break;
     case 'prefixText':
-      return `"${className}"."${object.key}" LIKE '${object.value}%'`;
+      res.clause = `"${className}"."${object.key}" LIKE $${index + 1} || '%'`;
+      res.value = object.value;
+      res.index = index;
+      break;
     case 'suffixText':
-      return `"${className}"."${object.key}" LIKE '%${object.value}'`;
+      res.clause = `"${className}"."${object.key}" LIKE '%' || $${index + 1}`;
+      res.value = object.value;
+      res.index = index;
+      break;
     case 'containsText':
-      return `"${className}"."${object.key}" LIKE '%${object.value}%'`;
+      res.clause = `"${className}"."${object.key}" LIKE '%' || $${index + 1} || '%'`;
+      res.value = object.value;
+      res.index = index;
+      break;
 
 
     //**************************************************
     //****************************************数组类型
     //数组元素全包含
     case 'containsAllArray':
-      return `"${className}"."${object.key}" = '{"${object.value.join('","')}"}'`;
+      res.clause = `"${className}"."${object.key}" = '{"${object.value.join('","')}"}'`;
+      res.index = index - 1;
+      break;
     //包含数组元素
     case 'containsInArray':
-      return `"${className}"."${object.key}" @> '{"${object.value.join('","')}"}'`;
+      res.clause = `"${className}"."${object.key}" @> '{"${object.value.join('","')}"}'`;
+      res.index = index - 1;
+      break;
     //数组元素被包含
     case 'containedByArray':
-      return `"${className}"."${object.key}" <@ '{"${object.value.join('","')}"}'`;
+      res.clause = `"${className}"."${object.key}" <@ '{"${object.value.join('","')}"}'`;
+      res.index = index - 1;
+      break;
     //数组元素有重叠
     case 'overlapInArray':
-      return `"${className}"."${object.key}" && '{"${object.value.join('","')}"}'`;
+      res.clause = `"${className}"."${object.key}" && '{"${object.value.join('","')}"}'`;
+      res.index = index - 1;
+      break;
     //数组元素全不包含
     case 'notContainAllArray':
-      return `"${className}"."${object.key}" <> '{"${object.value.join('","')}"}'`;
+      res.clause = `"${className}"."${object.key}" <> '{"${object.value.join('","')}"}'`;
+      res.index = index - 1;
+      break;
     //数组元素不被包含
     case 'notContainInArray':
-      return `NOT ('${object.value}' = ANY("${className}"."${object.key}"))`;
+      res.clause = `NOT ('${object.value}' = ANY("${className}"."${object.key}"))`;
+      res.index = index - 1;
+      break;
     //匹配数组长度
     case 'lengthInArray':
       if(object.value === 0) {
-        return `
+        res.clause =  `
         (ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) IS NULL
         OR ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = 0)
         `;
       }
-      return `ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = ${object.value}`;
+      res.clause = `ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = ${object.value}`;
+      res.index = index - 1;
+      break;
 
 
     //**************************************************
     //****************************************JSON类型
     //JSON中的基础运算符判断
     case 'equalInJson':
-      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = '${object.jsonValue}'`;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = $${index + 1}`;
+      res.value = object.jsonValue;
+      res.index = index;
+      break;
     case 'equalsInJson':
-      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = ANY(VALUES ${object.jsonValue.map((item) => {
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = ANY(VALUES ${object.jsonValue.map((item) => {
         return `('${item.id}')`
       }).join(',')})`;
+      res.index = index - 1;
+      break;
     case 'notEqualInJson':
-      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} != '${object.jsonValue}'`;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} != '${object.jsonValue}'`;
+      res.index = index - 1;
+      break;
     case 'greaterThanInJson':
-      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} > '${object.jsonValue}'`;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} > '${object.jsonValue}'`;
+      res.index = index - 1;
+      break;
     case 'greaterThanOrEqualInJson':
-      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} >= '${object.jsonValue}'`;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} >= '${object.jsonValue}'`;
+      res.index = index - 1;
+      break;
     case 'lessThanInJson':
-      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} < '${object.jsonValue}'`;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} < '${object.jsonValue}'`;
+      res.index = index - 1;
+      break;
     case 'lessThanOrEqualInJson':
-      return `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} <= '${object.jsonValue}'`;
+      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} <= '${object.jsonValue}'`;
+      res.index = index - 1;
+      break;
     //JSON中是否存在指定key
     case 'existKeyInJson':
-      return `"${className}"."${object.key}" ? '${object.value}'`;
+      res.clause = `"${className}"."${object.key}" ? '${object.value}'`;
+      res.index = index - 1;
+      break;
     //JSON中是否存在多个key中的任意一个
     case 'existAnyKeysInJson':
-      return `"${className}"."${object.key}" ?| '${object.value}'`;
+      res.clause = `"${className}"."${object.key}" ?| '${object.value}'`;
+      res.index = index - 1;
+      break;
     //JSON中是否存在指定的全部key
     case 'existAllKeysInJson':
-      return `"${className}"."${object.key}" ?& '${object.value}'`;
+      res.clause = `"${className}"."${object.key}" ?& '${object.value}'`;
+      res.index = index - 1;
+      break;
     case 'containsInJson':
-      return `"${className}"."${object.key}" @> '${object.value}'`;
+      res.clause = `"${className}"."${object.key}" @> '${object.value}'`;
+      res.index = index - 1;
+      break;
     case 'containedByJson':
-      return `"${className}"."${object.key}" <@ '${object.value}'`;
+      res.clause = `"${className}"."${object.key}" <@ '${object.value}'`;
+      res.index = index - 1;
+      break;
 
     //**************************************************
     //****************************************其它
     case 'exist':
-      return `"${className}"."${object.key}" IS NOT NULL`;
+      res.clause = `"${className}"."${object.key}" IS NOT NULL`;
+      res.index = index - 1;
+      break;
     case 'notExist':
-      return `"${className}"."${object.key}" IS NULL`;
+      res.clause = `"${className}"."${object.key}" IS NULL`;
+      res.index = index - 1;
+      break;
   }
-
+  return res;
   /**
    * 获取json箭头语句
    * @param jsonKey
@@ -115,13 +219,18 @@ module.exports = function (className, object) {
    * @return {string}
    */
   function getVariableValue(value) {
+    const res = {};
+    res.isVariable = false;
+    res.value = `'${value}'`;
     if(typeof value === 'string' && value.indexOf('${') >= 0 && value.indexOf('}') > 0 ) {
-      return value.replace(/\$\{([\s\S][^\}]*)\}/g, `"${className}"."$1"`);
+      res.isVariable = true;
+      res.value = value.replace(/\$\{([\s\S][^\}]*)\}/g, `"${className}"."$1"`);
     }
     if(typeof value === 'string' && value.indexOf('$') >= 0 && value.indexOf('{') < 0 && value.indexOf('}') < 0) {
-      return `"${className}"."${value.substr(1)}"`
+      res.isVariable = true;
+      res.value = `"${className}"."${value.substr(1)}"`
     }
-    return `'${value}'`;
+    return res;
   }
   /**
    * 获取可为变量的键

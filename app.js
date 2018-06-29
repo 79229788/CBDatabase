@@ -14,17 +14,19 @@ CB.initPG({
   database        : 'test',
   tableList       : config_tables.tables,
   checkTable      : true,
-  printSql        : false,
-  printSqlParams  : false
+  printSql        : true,
+  printSqlParams  : true
 });
 CB.initOSS({
-  region          : config_oss.oss.region,
+  endpoint        : config_oss.oss.endpoint,
   accessKeyId     : config_oss.oss.accessKeyId,
   accessKeySecret : config_oss.oss.accessKeySecret,
-  bucket          : 'erp-user-norm',
+  bucket          : config_oss.oss.bucket,
 });
 CB.initSessionRedis({
   host          : config_redis.redis.sessionRedis.host,
   port          : config_redis.redis.sessionRedis.port,
   password      : config_redis.redis.sessionRedis.password,
 });
+
+

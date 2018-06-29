@@ -105,7 +105,7 @@ module.exports = function (CB) {
      */
     setSessionToken: async function (key1, key2) {
       //直接使用未过期的sessionToken
-     let sessionToken = await CB.sessionRedis.getTemporary(this.id);
+      let sessionToken = await CB.sessionRedis.getTemporary(this.id);
       if(!sessionToken) {
         sessionToken = CB.session.generateSessionToken(key1, key2);
         await CB.sessionRedis.setTemporary(this.id, sessionToken, CB.session.options.maxAge);
@@ -201,6 +201,14 @@ module.exports = function (CB) {
      */
     signUp: async function (client) {
       return await this._signUpBase('username', client);
+    },
+    /**
+     * 通过手机号注册账号
+     * @param client
+     * @return {Promise.<*|Promise.<void>>}
+     */
+    signUpWithMobilePhoneNumber: async function (client) {
+      return await this._signUpBase('mobilePhoneNumber', client);
     },
     /**
      * 通过邮箱注册账号

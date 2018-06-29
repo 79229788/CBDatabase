@@ -68,6 +68,9 @@ CB.initSessionRedis = function (config) {
   const _config = _.clone(CB.sessionRedisConfig);
   if(!_config.password) delete _config.password;
   CB.sessionRedis = Redis.createClient(_config);
+  CB.sessionRedis.on('error', (error) => {
+    console.error('[Session Redis]', error.message);
+  });
   //*****设置临时数据（有过期时间的数据）
   CB.sessionRedis.setTemporary = async function (key, value, expires) {
     if(!expires) throw new Error('sessionRedis中setTemporary方法的expires参数不能为空');
@@ -86,6 +89,6 @@ CB.initSessionRedis = function (config) {
         ok(data);
       });
     });
-  }
+  };
 };
 

@@ -235,23 +235,31 @@ module.exports = function (CB) {
     //*****
     let whereClause = '';
     let conditionClauseItems = [];
+    let conditionClauseValues = [];
     let conditionJoinsItems = [];
     let conditionClauseMap = {};
+    let conditionIndex = 0;
     //***主查询
     conditionCollection.forEach((conditionObject) => {
-      const clause = Condition(className, conditionObject);
-      if(conditionObject.name) conditionClauseMap[conditionObject.name] = clause;
-      conditionClauseItems.push(clause);
+      const condition = Condition(className, conditionObject, conditionIndex);
+      if(conditionObject.name) conditionClauseMap[conditionObject.name] = condition.clause;
+      conditionClauseItems.push(condition.clause);
+      if(condition.value) conditionClauseValues.push(condition.value);
+      conditionIndex = condition.index;
+      conditionIndex ++;
     });
     //***关联查询
     includeCollection.forEach((object) => {
       (object.conditionCollection || []).forEach((conditionObject) => {
-        const clause = Condition(object.className, conditionObject);
+        const condition = Condition(object.className, conditionObject, conditionIndex);
         if(conditionObject.name) {
           if(conditionClauseMap[conditionObject.name]) throw new Error('查询条件的name不允许重复[主查询与子查询也不能出现重复]');
-          conditionClauseMap[conditionObject.name] = clause;
+          conditionClauseMap[conditionObject.name] = condition.clause;
         }
-        conditionClauseItems.push(clause);
+        conditionClauseItems.push(condition.clause);
+        if(condition.value) conditionClauseValues.push(condition.value);
+        conditionIndex = condition.index;
+        conditionIndex ++;
       });
       //处理条件拼接
       if(object.conditionJoins && JSON.stringify(conditionClauseMap) !== '{}') {
@@ -321,6 +329,7 @@ module.exports = function (CB) {
       joinsSelectClause: joinsSelectClause,
       joinsRelationClause: joinsRelationClause,
       whereClause: whereClause,
+      whereClauseValues: conditionClauseValues,
       joinsGroupClause: joinsGroupClause,
       orderClause: orderClause,
     };
@@ -378,6 +387,7 @@ module.exports = function (CB) {
       let sql = '';
       let unionClassName = '';
       let unionSelectCollection = null;
+      let whereClauseValues = [];
       if(!isUnionQuery) {
         const clauses = getFindClauses(
           className,
@@ -393,6 +403,7 @@ module.exports = function (CB) {
         let whereClause = clauses.whereClause;
         let joinsGroupClause = clauses.joinsGroupClause;
         let orderClause = clauses.orderClause;
+        whereClauseValues = clauses.whereClauseValues;
         //*****查询类型
         switch (type) {
           case 'first':
@@ -461,6 +472,7 @@ module.exports = function (CB) {
           let joinsRelationClause = clauses.joinsRelationClause;
           let whereClause = clauses.whereClause;
           let joinsGroupClause = clauses.joinsGroupClause;
+          whereClauseValues = clauses.whereClauseValues;
           //*****查询类型
           switch (type) {
             case 'count':
@@ -495,9 +507,10 @@ module.exports = function (CB) {
         `;
       }
       printSql(sql, unionClassName || className, 'find');
+      printSqlParams(whereClauseValues, className, 'find');
       const _client = client || CB.pg;
       try {
-        const result = await _client.query(sql);
+        const result = await _client.query(sql, whereClauseValues);
         switch (type) {
           case 'first':
           case 'find':
@@ -513,7 +526,7 @@ module.exports = function (CB) {
             return count;
         }
       }catch (error) {
-        //*****表不存在时，直接返回空值
+        //*****表不存在时，强制返回空值[强制忽略错误，会影响事务功能，请谨慎处理事务中表不存在的find查询]
         if(error.code === '42P01') {
           switch (type) {
             case 'first':
