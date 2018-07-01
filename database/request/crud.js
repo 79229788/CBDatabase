@@ -636,21 +636,7 @@ module.exports = function (CB) {
      */
     update: async function (className, object, condition, returnKeys, client) {
       if(_.size(object) === 0) return;
-      //*****获取查询语句
-      let otherWhereClause = '';
-      let conditionClauseItems = [];
-      let conditionClauseMap = {};
-      if(condition) {
-        condition.forEach((conditionObject) => {
-          const clause = Condition(className, conditionObject);
-          if(conditionObject.name) conditionClauseMap[className + conditionObject.name] = clause;
-          conditionClauseItems.push(clause);
-        });
-        if(conditionClauseItems.length > 0) {
-          otherWhereClause = `${object.objectId ? 'AND ' : ''}${conditionClauseItems.join(' AND ')}`;
-        }
-      }
-
+      let index = 0;
       //重新得到要更新的object
       _.extend(object, {
         updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
@@ -665,46 +651,69 @@ module.exports = function (CB) {
       });
       if(!object.objectId) returningValues.push(`"objectId"`);
       const returningClause = returningValues.length > 0 ? `RETURNING ${ _.uniq(returningValues).join(',')}` : '';
-      let index = 0;
+      //*****生成设置数据
+      let setClauses = [];
+      _.each(tmpObject, (value, key) => {
+        //特殊属性处理
+        if(key.indexOf(':[action]incrementDate') > 0) {
+          const _key = key.replace(':[action]incrementDate', '');
+          setClauses.push(`"${_key}" = "${_key}" + INTERVAL $${index + 1}`);
+        }else if(key.indexOf(':[action]increment') > 0) {
+          const _key = key.replace(':[action]increment', '');
+          setClauses.push(`"${_key}" = "${_key}" + $${index + 1}`);
+        }else if(key.indexOf(':[action]append') > 0) {
+          const _key = key.replace(':[action]append', '');
+          setClauses.push(`"${_key}" = array_append("${_key}", $${index + 1})`);
+        }else if(key.indexOf(':[action]prepend') > 0) {
+          const _key = key.replace(':[action]prepend', '');
+          setClauses.push(`"${_key}" = array_prepend("${_key}", $${index + 1})`);
+        }else if(key.indexOf(':[action]concat') > 0) {
+          const _key = key.replace(':[action]concat', '');
+          setClauses.push(`"${_key}" = array_cat("${_key}", $${index + 1})`);
+        }else if(key.indexOf(':[action]remove') > 0) {
+          const _key = key.replace(':[action]remove', '');
+          setClauses.push(`"${_key}" = array_remove("${_key}", $${index + 1})`);
+        }else {
+          setClauses.push(`"${key}" = $${index + 1}`);
+        }
+        index ++;
+      });
+
+      //*****生成查询语句
+      let otherWhereClause = '';
+      let conditionClauseItems = [];
+      let conditionClauseValues = [];
+      let conditionClauseMap = {};
+      let conditionIndex = index;
+      if(object.objectId) {
+        otherWhereClause += `"objectId" = $${index + 1}`;
+        conditionIndex ++;
+      }
+      if(condition) {
+        condition.forEach((conditionObject) => {
+          const condition = Condition(className, conditionObject, conditionIndex);
+          if(conditionObject.name) conditionClauseMap[className + conditionObject.name] = condition.clause;
+          conditionClauseItems.push(condition.clause);
+          if(!_.isUndefined(condition.value)) conditionClauseValues.push(condition.value);
+          conditionIndex = condition.index;
+          conditionIndex ++;
+        });
+        if(conditionClauseItems.length > 0) {
+          otherWhereClause += `${object.objectId ? ' AND ' : ''}${conditionClauseItems.join(' AND ')}`;
+        }
+      }
       const sql = `
         UPDATE 
           "${className}" 
         SET
-          ${_.map(tmpObject, (value, key) => {
-        index++;
-        //特殊属性处理
-        if(key.indexOf(':[action]incrementDate') > 0) {
-          const _key = key.replace(':[action]incrementDate', '');
-          return `"${_key}" = "${_key}" + INTERVAL $${index}`;
-        }
-        if(key.indexOf(':[action]increment') > 0) {
-          const _key = key.replace(':[action]increment', '');
-          return `"${_key}" = "${_key}" + $${index}`;
-        }
-        if(key.indexOf(':[action]append') > 0) {
-          const _key = key.replace(':[action]append', '');
-          return `"${_key}" = array_append("${_key}", $${index})`;
-        }
-        if(key.indexOf(':[action]prepend') > 0) {
-          const _key = key.replace(':[action]prepend', '');
-          return `"${_key}" = array_prepend("${_key}", $${index})`;
-        }
-        if(key.indexOf(':[action]concat') > 0) {
-          const _key = key.replace(':[action]concat', '');
-          return `"${_key}" = array_cat("${_key}", $${index})`;
-        }
-        if(key.indexOf(':[action]remove') > 0) {
-          const _key = key.replace(':[action]remove', '');
-          return `"${_key}" = array_remove("${_key}", $${index})`;
-        }
-        return `"${key}" = $${index}`;
-      }).join(',')}
+          ${setClauses.join(',')}
         WHERE
-          ${object.objectId ? `"objectId" = $${index + 1}` : ''}
           ${otherWhereClause}
         ${returningClause}
       `;
-      const params = _.values(tmpObject).concat(object.objectId ? [object.objectId] : []);
+      let params =  _.values(tmpObject);
+      if(object.objectId) params.push(object.objectId);
+      params = params.concat(conditionClauseValues);
       printSql(sql, className, 'update');
       printSqlParams(params, className, 'update');
       const _client = client || await CB.pg.connect();
@@ -746,32 +755,35 @@ module.exports = function (CB) {
       //*****获取id查询语句
       let index = 0;
       let idWhereClause = '';
+      let idWhereClauseValues = [];
       _.each(idCondition, (value, key) => {
-        index++;
-        if(key.indexOf(':batch') > 0) {
-          const ids = [];
-          _.each(value, (v) => {
-            if(v) {
-              ids.push(`($${index})`);
-              index++;
+        if(key && value) {
+          if(key.indexOf(':batch') > 0) {
+            if(value.length > 0) {
+              idWhereClause = `"${key.replace(':batch', '')}" = ANY($${index + 1})`;
+              idWhereClauseValues.push(value);
             }
-          });
-          if(ids.length > 0) {
-            idWhereClause = `"${key.replace(':batch', '')}" = ANY(VALUES ${ids.join(',')})`;
+          }else {
+            idWhereClause = `"${key}" = $${index + 1}`;
+            idWhereClauseValues.push(value);
           }
-        }else {
-          if(value) idWhereClause = `"${key}" = $${index}`;
+          index++;
         }
       });
       //*****获取其它查询语句
       let otherWhereClause = '';
       let conditionClauseItems = [];
+      let conditionClauseValues = [];
       let conditionClauseMap = {};
+      let conditionIndex = index;
       if(otherCondition) {
         otherCondition.forEach((conditionObject) => {
-          const clause = Condition(className, conditionObject);
-          if(conditionObject.name) conditionClauseMap[className + conditionObject.name] = clause;
-          conditionClauseItems.push(clause);
+          const condition = Condition(className, conditionObject, conditionIndex);
+          if(conditionObject.name) conditionClauseMap[className + conditionObject.name] = condition.clause;
+          conditionClauseItems.push(condition.clause);
+          if(!_.isUndefined(condition.value)) conditionClauseValues.push(condition.value);
+          conditionIndex = condition.index;
+          conditionIndex ++;
         });
         if(conditionClauseItems.length > 0) {
           otherWhereClause = conditionClauseItems.join(' AND ');
@@ -790,16 +802,7 @@ module.exports = function (CB) {
           ${_.compact([idWhereClause, otherWhereClause]).join(' AND ')}
         ${returningClause}
       `;
-      const params = [];
-      _.each(idCondition, (value, key) => {
-        if(key.indexOf(':batch') > 0) {
-          value.forEach((item) => {
-            if(item) params.push(item);
-          });
-        }else {
-          if(value) params.push(value);
-        }
-      });
+      const params = idWhereClauseValues.concat(conditionClauseValues);
       printSql(sql, className, 'delete');
       printSqlParams(params, className, 'delete');
       const _client = client || await CB.pg.connect();
@@ -812,7 +815,7 @@ module.exports = function (CB) {
         }
         return 'ok';
       }catch (error) {
-        //*****表不存在时，直接返回成本
+        //*****表不存在时，直接返回成功[强制忽略错误，会影响事务功能，请谨慎处理事务中表不存在表操作]
         if(error.code === '42P01') return 'ok';
         throw handleError(error, className);
       }finally {
