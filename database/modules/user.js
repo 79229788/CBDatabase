@@ -137,9 +137,9 @@ module.exports = function (CB) {
      * @return {Promise.<*>}
      */
     getCurrentUserFromCache: async function (childClass) {
-      const data = await CB.sessionRedis.getTemporary(this.id + '@info');
-      const user = new CB.User(JSON.parse(data), {serverData: true});
-      user.setChildClass(childClass || this._className);
+      const data = JSON.parse(await CB.sessionRedis.getTemporary(this.id + '@info'));
+      const user = new CB.User(data, {serverData: true});
+      user.setChildClass(childClass || data.className || this._className);
       return user;
     },
     /**
