@@ -1,3 +1,4 @@
+const _ = require('lodash');
 module.exports = function (className, object, index) {
   const res = {};
   const variableValue = getVariableValue(object.value);
@@ -9,22 +10,25 @@ module.exports = function (className, object, index) {
         res.clause = `${getVariableKey(object.key)} = ${variableValue.value}`;
         res.index = index - 1;
       }else {
-        res.clause = `${getVariableKey(object.key)} = $${index + 1}`;
+        if(_.isArray(object.value)) {
+          res.clause = `${getVariableKey(object.key)} = ANY($${index + 1})`;
+        }else {
+          res.clause = `${getVariableKey(object.key)} = $${index + 1}`;
+        }
         res.value = object.value;
         res.index = index;
       }
-      break;
-    case 'equals':
-      res.clause = `"${className}"."${object.key}" = ANY($${index + 1})`;
-      res.value = object.value;
-      res.index = index;
       break;
     case 'notEqual':
       if(variableValue.isVariable) {
         res.clause = `${getVariableKey(object.key)} != ${variableValue.value}`;
         res.index = index - 1;
       }else {
-        res.clause = `${getVariableKey(object.key)} != $${index + 1}`;
+        if(_.isArray(object.value)) {
+          res.clause = `NOT ${getVariableKey(object.key)} = ANY($${index + 1})`;
+        }else {
+          res.clause = `${getVariableKey(object.key)} != $${index + 1}`;
+        }
         res.value = object.value;
         res.index = index;
       }
@@ -142,17 +146,20 @@ module.exports = function (className, object, index) {
     //****************************************JSON类型
     //JSON中的基础运算符判断
     case 'equalInJson':
-      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = $${index + 1}`;
+      if(_.isArray(object.jsonValue)) {
+        res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = ANY($${index + 1})`;
+      }else {
+        res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = $${index + 1}`;
+      }
       res.value = object.jsonValue;
       res.index = index;
       break;
-    case 'equalsInJson':
-      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = ANY($${index + 1})`;
-      res.value = object.jsonValue.map(item => item.id);
-      res.index = index;
-      break;
     case 'notEqualInJson':
-      res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} != $${index + 1}`;
+      if(_.isArray(object.jsonValue)) {
+        res.clause = `NOT "${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} = ANY($${index + 1})`;
+      }else {
+        res.clause = `"${className}"."${object.key}" ${getJsonArrowClause(object.jsonKey)} != $${index + 1}`;
+      }
       res.value = object.jsonValue;
       res.index = index;
       break;

@@ -318,9 +318,8 @@ module.exports = function (CB) {
           return this.equalTo(key, value[0], name);
         }
         if(value[0] instanceof CB.Object || value[0] instanceof CB.File) {
-          return this._jsonCondition(key, 'objectId', value, name, 'equalsInJson');
+          return this._jsonCondition(key, 'objectId', value, name, 'equalInJson');
         }
-        return this._baseCondition(key, value, name, 'equals');
       }
       return this._baseCondition(key, value, name, 'equal');
     },
