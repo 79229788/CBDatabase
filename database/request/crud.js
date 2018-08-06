@@ -17,7 +17,7 @@ module.exports = function (CB) {
         relations.push({
           level: keys.length,
           key: lastKey,
-          value: value,
+          value: value || null,
         });
         delete row[key];
       }
