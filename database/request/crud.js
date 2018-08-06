@@ -9,43 +9,28 @@ module.exports = function (CB) {
    * @param row
    */
   const mergeChildren = (row) => {
-    const rootItems = {};
-    //把连接过来的子类合并到其父根类属性中
+    let relations = [];
     _.each(row, (value, key) => {
-      if(key.indexOf('.') > 0) {
-        const arr = key.split('.');
-        if(arr.length === 2 && row[arr[0]] && row[arr[0]][arr[1]]) row[arr[0]][arr[1]] = merge(row[arr[0]][arr[1]], value);
-        if(arr.length === 3 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]]) row[arr[0]][arr[1]][arr[2]] = merge(row[arr[0]][arr[1]][arr[2]], value);
-        if(arr.length === 4 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]]) row[arr[0]][arr[1]][arr[2]][arr[3]] = merge(row[arr[0]][arr[1]][arr[2]][arr[3]], value);
-        if(arr.length === 5 && row[arr[0]] && row[arr[0]][arr[1]] && row[arr[0]][arr[1]][arr[2]] && row[arr[0]][arr[1]][arr[2]][arr[3]] && row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]]) row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]] = merge(row[arr[0]][arr[1]][arr[2]][arr[3]][arr[4]], value);
-        delete row[key];
-      }
-      if(key.indexOf('^') === 0) rootItems[key] = value;
-    });
-    //把父根类合并到最外层对象中
-    _.each(rootItems, (value, key) => {
       if(key.indexOf('^') === 0) {
-        row[key.substr(1)] = merge(row[key.substr(1)], value);
+        const keys = key.substr(1).split('.');
+        const lastKey = keys[keys.length - 1];
+        relations.push({
+          level: keys.length,
+          key: lastKey,
+          value: value,
+        });
         delete row[key];
       }
     });
-    //进行合并
-    function merge(oldItem, newItem) {
-      if(_.isArray(oldItem)) {
-        return oldItem.map((item) => {
-          const _newItem = _.find(newItem, {objectId: item.objectId});
-          if(_newItem) {
-            return _.extend(item, _newItem);
-          }else {
-            return null;
-          }
-        });
-      }else if(!oldItem && _.isArray(newItem)) {
-        return [];
-      }else if(oldItem) {
-        return newItem ? _.extend(oldItem, newItem) : null;
+    relations = relations.sort((a, b) => b - a);
+    relations.forEach((item, index) => {
+      if(index + 1 < relations.length) {
+        const next = relations[index + 1];
+        next.value[item.key] = item.value;
       }
-    }
+    });
+    const finalRelation = relations[relations.length - 1];
+    row[finalRelation.key] = finalRelation.value;
   };
   /**
    * 数据类型兼容处理

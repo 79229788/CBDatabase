@@ -15,8 +15,8 @@ CB.initPG({
   database        : 'test',
   tableList       : config_tables.tables,
   checkTable      : true,
-  printSql        : true,
-  printSqlParams  : true
+  printSql        : false,
+  printSqlParams  : false
 });
 CB.initOSS({
   endpoint        : config_oss.oss.endpoint,
@@ -98,6 +98,9 @@ const Table3 = CB.Object.extend('Table3');
 // }).catch(error => {
 //   console.log(error);
 // });
+
+
+
 
 
 
