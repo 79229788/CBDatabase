@@ -23,7 +23,7 @@ module.exports = function (CB) {
       }
     });
     if(relations.length > 0) {
-      relations = relations.sort((a, b) => b - a);
+      relations = relations.sort((a, b) => b.level - a.level);
       relations.forEach((item, index) => {
         if(index + 1 < relations.length) {
           const next = relations[index + 1];
