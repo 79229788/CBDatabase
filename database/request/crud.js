@@ -9,12 +9,13 @@ module.exports = function (CB) {
    * @param row
    */
   const mergeChildren = (row) => {
-    let relations = [];
+    const relationMap = {};
     _.each(row, (value, key) => {
       if(key.indexOf('^') === 0) {
         const keys = key.substr(1).split('.');
         const lastKey = keys[keys.length - 1];
-        relations.push({
+        if(!relationMap[keys.length]) relationMap[keys.length] = [];
+        relationMap[keys.length].push({
           level: keys.length,
           key: lastKey,
           value: value,
@@ -22,18 +23,25 @@ module.exports = function (CB) {
         delete row[key];
       }
     });
-    if(relations.length > 0) {
-      relations = relations.sort((a, b) => b.level - a.level);
-      relations.forEach((item, index) => {
-        if(index + 1 < relations.length) {
-          const next = relations[index + 1];
-          if(next.value && next.value[item.key]) {
-            next.value[item.key] = item.value;
-          }
+    let relationSections = Object.values(relationMap);
+    if(relationSections.length > 0) {
+      relationSections = relationSections.sort((a, b) => b[0].level - a[0].level);
+      relationSections.forEach((section, index) => {
+        if(index + 1 < relationSections.length) {
+          const nextSection = relationSections[index + 1];
+          section.forEach(current => {
+            nextSection.forEach(next => {
+              if(next.value && next.value[current.key]) {
+                next.value[current.key] = current.value;
+              }
+            });
+          });
         }
       });
-      const finalRelation = relations[relations.length - 1];
-      row[finalRelation.key] = finalRelation.value;
+      const finalRelations = relationSections[relationSections.length - 1];
+      finalRelations.forEach(relation => {
+        row[relation.key] = relation.value;
+      });
     }
   };
   /**

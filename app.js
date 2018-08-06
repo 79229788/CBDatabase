@@ -100,6 +100,17 @@ const Table3 = CB.Object.extend('Table3');
 // });
 
 
+const query = new CB.Query(Table1);
+query.equalTo('name', '表格一');
+query.include('table', Table2);
+query.include('table.table', Table3);
+query.first().then(data => {
+  if(!data) return console.log('未查询到数据');
+  console.log(data.toOrigin());
+}).catch(error => {
+  console.log(error);
+});
+
 
 
 
