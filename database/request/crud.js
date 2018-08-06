@@ -32,7 +32,7 @@ module.exports = function (CB) {
           section.forEach(current => {
             nextSection.forEach(next => {
               if(next.value && next.value[current.key]) {
-                next.value[current.key] = current.value;
+                _.extend(next.value[current.key], current.value);
               }
             });
           });
