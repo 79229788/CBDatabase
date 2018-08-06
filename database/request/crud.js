@@ -22,15 +22,17 @@ module.exports = function (CB) {
         delete row[key];
       }
     });
-    relations = relations.sort((a, b) => b - a);
-    relations.forEach((item, index) => {
-      if(index + 1 < relations.length) {
-        const next = relations[index + 1];
-        next.value[item.key] = item.value;
-      }
-    });
-    const finalRelation = relations[relations.length - 1];
-    row[finalRelation.key] = finalRelation.value;
+    if(relations.length > 0) {
+      relations = relations.sort((a, b) => b - a);
+      relations.forEach((item, index) => {
+        if(index + 1 < relations.length) {
+          const next = relations[index + 1];
+          next.value[item.key] = item.value;
+        }
+      });
+      const finalRelation = relations[relations.length - 1];
+      row[finalRelation.key] = finalRelation.value;
+    }
   };
   /**
    * 数据类型兼容处理
