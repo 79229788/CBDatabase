@@ -27,7 +27,9 @@ module.exports = function (CB) {
       relations.forEach((item, index) => {
         if(index + 1 < relations.length) {
           const next = relations[index + 1];
-          next.value[item.key] = item.value;
+          if(next.value && next.value[item.key]) {
+            next.value[item.key] = item.value;
+          }
         }
       });
       const finalRelation = relations[relations.length - 1];
