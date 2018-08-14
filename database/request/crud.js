@@ -44,7 +44,11 @@ module.exports = function (CB) {
       });
       const finalRelations = relationSections[relationSections.length - 1];
       finalRelations.forEach(relation => {
-        row[relation.key] = relation.value;
+        if(relation.value === null) {
+          row[relation.key] = null;
+        }else {
+          _.extend(row[relation.key], relation.value);
+        }
       });
     }
   };
@@ -651,6 +655,7 @@ module.exports = function (CB) {
         if(key.indexOf(':[action]') > 0) returningValues.push(`"${key.split(':[action]')[0]}"`);
       });
       if(!object.objectId) returningValues.push(`"objectId"`);
+      returningValues.push(`"createdAt"`);
       const returningClause = returningValues.length > 0 ? `RETURNING ${ _.uniq(returningValues).join(',')}` : '';
       //*****生成设置数据
       let setClauses = [];
