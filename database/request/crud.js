@@ -621,6 +621,11 @@ module.exports = function (CB) {
                 delete object[key];
               }
             });
+            returningValues
+              .map(item => item.replace(/^"(\S*)"$/, '$1'))
+              .forEach((key) => {
+                object[key] = row[key];
+              });
           });
         }
         return object;
@@ -736,10 +741,11 @@ module.exports = function (CB) {
                 delete object[key];
               }
             });
-            if(!object.objectId) object.objectId = row.objectId;
-            (returnKeys || []).forEach((key) => {
-              object[key] = row[key];
-            });
+            returningValues
+              .map(item => item.replace(/^"(\S*)"$/, '$1'))
+              .forEach((key) => {
+                object[key] = row[key];
+              });
           });
         }
         return object;
