@@ -84,11 +84,12 @@ module.exports = function (CB) {
   /**
    * 获取指针对象
    * @param objectId
+   * @param relationId
    */
-  CB.File.getPointer = function (objectId) {
+  CB.File.getPointer = function (objectId, relationId) {
     return {
       __type: "File",
-      className: '_File',
+      className: relationId ? `_File@_@${relationId}` : '_File',
       objectId: objectId
     };
   };
