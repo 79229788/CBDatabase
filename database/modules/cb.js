@@ -106,9 +106,12 @@ CB._encode = function (object, key) {
   if(object.__type === 'Pointer') {
     let pointer;
     if(_.size(object) > 3) {
-      pointer = new CB.Object(object, {serverData: true});
+      pointer = new CB.Object(object);
     }else {
-      pointer = new CB.Object({__type: object.__type, className: object.className, objectId: object.objectId}, {serverData: true, hasData: false});
+      pointer = new CB.Object(
+        {__type: object.__type, className: object.className, objectId: object.objectId},
+        {hasData: false}
+      );
     }
     return pointer;
   }
@@ -131,17 +134,17 @@ CB._encode = function (object, key) {
  * @return {*}
  * @private
  */
-CB._decode = function (object, hiddenFields) {
+CB._decode = function (object, hiddenFields = []) {
   if(_.isDate(object)) return CB._parseDate(object);
   if(_.isArray(object)) return _.map(object, child => CB._decode(child, hiddenFields));
   if(object instanceof CB.Object || object instanceof CB.File) {
     const origin = _.extend(object.getPointer(), object.attributes);
-    if(object.id) {
-      origin.objectId = object.id;
-    }else {
-      delete origin.objectId;
-    }
-    (hiddenFields || []).forEach(key => {
+    origin.className = origin.className.split('@_@')[0];
+    delete origin.objectId;
+    if(object.id) origin.objectId = object.id;
+    if(object.createdAt) origin.createdAt = object.createdAt;
+    if(object.updatedAt) origin.updatedAt = object.updatedAt;
+    hiddenFields.forEach(key => {
       delete origin[key];
     });
     return CB._decode(origin, hiddenFields);

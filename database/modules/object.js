@@ -1,12 +1,9 @@
 const _ = require('lodash');
 const utils = require('../utils');
-const RESERVED_KEYS = ['objectId', 'createdAt', 'updatedAt'];
+const RESERVED_KEYS = ['className', '__type', 'objectId', 'createdAt', 'updatedAt'];
 const checkReservedKey = function checkReservedKey(key) {
   if(key.indexOf('^') > -1 || key.indexOf('.') > -1) {
-    throw new Error('[CBOBJECT ERROR] 字段命名中不允许使用.和^，请修改后重试！');
-  }
-  if(RESERVED_KEYS.indexOf(key) !== -1) {
-    throw new Error('key[' + key + '] is reserved');
+    throw new Error(`[CBOBJECT ERROR] 字段命名(${key})中不允许使用.和^，请修改后重试！`);
   }
 };
 
@@ -14,14 +11,9 @@ module.exports = function (CB) {
   CB.Object = function (attributes, options) {
     attributes = attributes || {};
     options = options || {};
-    if(_.isString(attributes)) {
-      attributes = {objectId: attributes};
-      options.serverData = true;
-    }
+    if(_.isString(attributes)) attributes = {objectId: attributes};
     if(attributes.constructor === this.constructor) attributes = attributes.toOrigin();
-    this.parseDefaultDate(attributes);
     this.cid = _.uniqueId('c');
-    this._serverData = options.serverData || false;
     this._hasData = options.hasData || true;
     this.set(attributes);
     this._previousAttributes = _.cloneDeep(this.attributes);
@@ -35,18 +27,6 @@ module.exports = function (CB) {
      * 初始化
      */
     init: function() {},
-    /**
-     * 解析默认日期属性
-     * @param object
-     * @return {*}
-     */
-    parseDefaultDate: function (object) {
-      const output = _.clone(object);
-      (['createdAt', 'updatedAt']).forEach((key) => {
-        if(output[key]) output[key] = CB._parseDate(output[key]);
-      });
-      if(output.createdAt && !output.updatedAt) output.updatedAt = output.createdAt;
-    },
 
     getObjectId: function () {
       return this.id;
@@ -91,21 +71,23 @@ module.exports = function (CB) {
       if(_.isObject(key)) {
         const object = {};
         _.each(key, (v, k) => {
-          if(!this._serverData) checkReservedKey(k);
+          checkReservedKey(k);
           object[k] = CB._encode(v, k);
         });
         attrs = _.extend({}, this.attributes, object);
       }else {
-        if(!this._serverData) checkReservedKey(key);
+        checkReservedKey(key);
         attrs[key] = CB._encode(value, key);
       }
       if(attrs.objectId) this.id = attrs.objectId;
       if(attrs.className) this._className = attrs.className;
       if(attrs.__type) this._type = attrs.__type;
+      if(attrs.createdAt) this.createdAt = CB._parseDate(attrs.createdAt);
+      if(attrs.updatedAt) this.updatedAt = CB._parseDate(attrs.updatedAt);
       this.attributes = attrs;
-      delete this.attributes.objectId;
-      delete this.attributes.className;
-      delete this.attributes.__type;
+      RESERVED_KEYS.forEach(key => {
+        delete this.attributes[key];
+      });
       return this;
     },
     /**
@@ -229,36 +211,23 @@ module.exports = function (CB) {
      */
     clone: function() {
       const origin = CB._decode(this);
-      const reservedMap = {};
-      RESERVED_KEYS.forEach(key => {
-        reservedMap[key] = origin[key];
-        delete origin[key];
-      });
-      const newModel = new this.constructor(origin);
-      _.each(reservedMap, (value, key) => {
-        if(value) {
-          if(key === 'objectId') {
-            newModel.id = value;
-          }else {
-            newModel.attributes[key] = value;
-          }
-        }
-      });
-      return newModel;
+      return new this.constructor(origin);
     },
     /**
      * 转化为json
+     * @param hiddenFields
      * @return {string}
      */
-    toJSON: function () {
-      return JSON.stringify(this.toOrigin());
+    toJSON: function (hiddenFields = ['password', 'authData']) {
+      return JSON.stringify(this.toOrigin(hiddenFields));
     },
     /**
      * 转化为原始数据
+     * @param hiddenFields
      * @return {object}
      */
-    toOrigin: function () {
-      return CB._decode(this, ['password', 'authData']);
+    toOrigin: function (hiddenFields = ['password', 'authData']) {
+      return CB._decode(this, hiddenFields);
     },
     /**
      * 转化为将要保存的原始数据（过滤掉未更新的属性）
@@ -266,7 +235,7 @@ module.exports = function (CB) {
      */
     _toSaveOrigin: function () {
       const curr = this.clone();
-      const prev = new CB.Object(this._previousAttributes, {serverData: true});
+      const prev = new CB.Object(this._previousAttributes);
       const saveObject = {};
       for(let key of Object.keys(curr.attributes)) {
         const value = curr.attributes[key];
@@ -383,8 +352,10 @@ module.exports = function (CB) {
     belongTo: function (relationId, options) {
       if(!relationId) return;
       options = options || [];
-      this._belongTo = `${this.className}@_@${relationId}`;
-      this._belongToOptions = _.isArray(options) ? options : [options];
+      if(this.className.indexOf('@_@') < 0) {
+        this._belongTo = `${this.className}@_@${relationId}`;
+        this._belongToOptions = _.isArray(options) ? options : [options];
+      }
     },
     /**
      * 设置内部的file归属id，表示使用继承表保存

@@ -713,11 +713,11 @@ module.exports = function (CB) {
         if(this.isUserQuery) {
           return new CB.User(_.extend(item, {
             className: this.className
-          }), {serverData: true});
+          }));
         }
         return new CB.Object(_.extend(item, {
           className: this.className
-        }), {serverData: true});
+        }));
       });
     },
     /**
@@ -731,11 +731,11 @@ module.exports = function (CB) {
       if(this.isUserQuery) {
         return new CB.User(_.extend(data, {
           className: this.className
-        }), {serverData: true});
+        }));
       }
       return new CB.Object(_.extend(data, {
         className: this.className
-      }), {serverData: true});
+      }));
     },
     /**
      * 获取数据数量

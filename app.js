@@ -100,17 +100,15 @@ const Table3 = CB.Object.extend('Table3');
 // });
 
 
-const query = new CB.Query(Table1);
-query.equalTo('name', '表格一');
-query.include('table', Table2);
-query.include('table.table', Table3);
-query.first().then(data => {
-  if(!data) return console.log('未查询到数据');
-  console.log(data.toOrigin());
-}).catch(error => {
-  console.log(error);
-});
-
+// CB.Cloud.Batch(async (client) => {
+//   const query = new CB.Query(Table1);
+//   const table = await query.get('BylENTepUQ', client);
+//   // const table = new Table1();
+//   // table.id = 'BylENTepUQ';
+//   table.set('file', CB.File.withURL('image', 'http://img3.xx.jpg'));
+//   const data = await table.save(client);
+//   console.log(data.toOrigin());
+// });
 
 
 

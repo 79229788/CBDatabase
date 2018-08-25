@@ -35,7 +35,13 @@ module.exports = function (CB) {
                 if(current.value === null) {
                   next.value[current.key] = null;
                 }else {
-                  _.extend(next.value[current.key], current.value);
+                  if(_.isArray(next.value[current.key])) {
+                    next.value[current.key].forEach((item, index) => {
+                      _.extend(item, current.value[index]);
+                    });
+                  }else {
+                    _.extend(next.value[current.key], current.value);
+                  }
                 }
               }
             });
@@ -47,7 +53,13 @@ module.exports = function (CB) {
         if(relation.value === null) {
           row[relation.key] = null;
         }else {
-          _.extend(row[relation.key], relation.value);
+          if(_.isArray(row[relation.key])) {
+            row[relation.key].forEach((item, index) => {
+              _.extend(item, relation.value[index]);
+            });
+          }else {
+            _.extend(row[relation.key], relation.value);
+          }
         }
       });
     }
@@ -744,8 +756,8 @@ module.exports = function (CB) {
             returningValues
               .map(item => item.replace(/^"(\S*)"$/, '$1'))
               .forEach((key) => {
-                object[key] = row[key];
-              });
+              object[key] = row[key];
+            });
           });
         }
         return object;
