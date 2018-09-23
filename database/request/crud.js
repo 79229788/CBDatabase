@@ -837,7 +837,7 @@ module.exports = function (CB) {
         return result.rows;
       }catch (error) {
         //*****表不存在时，直接返回成功状态[强制忽略错误，会影响事务功能，请谨慎处理事务中表不存在表操作]
-        if(error.code === '42P01') return 'not exist';
+        if(error.code === '42P01') return 'table not exist';
         throw handleError(error, className);
       }finally {
         if(!client) _client.release();
