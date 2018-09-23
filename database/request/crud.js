@@ -813,12 +813,12 @@ module.exports = function (CB) {
           otherWhereClause = conditionClauseItems.join(' AND ');
         }
       }
-      //*****返回字段
-      let returningClause = '';
-      if((returnKeys || []).length > 0) {
-        returnKeys.unshift('objectId');
-        returningClause = `RETURNING ${ _.uniq(returnKeys.map(key => `"${key}"`)).join(',')}`
-      }
+      //*****指定需要立即返回的字段
+      const returningValues = _.clone(returnKeys || []).map(item => `"${item}"`);
+      returningValues.push(`"objectId"`);
+      returningValues.push(`"createdAt"`);
+      returningValues.push(`"updatedAt"`);
+      const returningClause = `RETURNING ${ _.uniq(returningValues).join(',')}`;
       const sql = `
         DELETE FROM 
           "${className}" 
@@ -833,14 +833,11 @@ module.exports = function (CB) {
       try {
         const result = await _client.query(sql, params);
         if(result.rowCount === 0) return null;
-        if(returningClause) {
-          handleServerDataType(result.rows, className, []);
-          return result.rows;
-        }
-        return 'ok';
+        handleServerDataType(result.rows, className, []);
+        return result.rows;
       }catch (error) {
-        //*****表不存在时，直接返回成功[强制忽略错误，会影响事务功能，请谨慎处理事务中表不存在表操作]
-        if(error.code === '42P01') return 'ok';
+        //*****表不存在时，直接返回成功状态[强制忽略错误，会影响事务功能，请谨慎处理事务中表不存在表操作]
+        if(error.code === '42P01') return 'not exist';
         throw handleError(error, className);
       }finally {
         if(!client) _client.release();

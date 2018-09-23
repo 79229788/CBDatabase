@@ -403,9 +403,21 @@ module.exports = function (CB) {
      */
     destroy: async function(client) {
       if(this._belongTo) this.changeClass(this._belongTo);
-      return await CB.crud.delete(this.className, {
+      const destroyedData = await CB.crud.delete(this.className, {
         objectId: this.id
       }, this._queryCondition, this._returnKeys, client);
+      if(_.isString(destroyedData)) return destroyedData;
+      if((destroyedData || []).length === 0) return null;
+      if(this.id) {
+        CB.Object._assignSavedData(destroyedData[0], this);
+        return this;
+      }
+      return destroyedData.map(item => {
+        const model = this.clone();
+        model._returnKeys = this._returnKeys;
+        CB.Object._assignSavedData(item, model);
+        return model;
+      });
     },
     /**
      * 深度保存对象
@@ -506,11 +518,11 @@ module.exports = function (CB) {
       if(items.length > 1) {
         await CB.crud.delete(className, {
           'objectId:batch': items.map(item => item.id)
-        }, items[0]._queryCondition, items[0]._returnKeys, client);
+        }, items[0]._queryCondition, [], client);
       }else if(items.length === 1) {
         await CB.crud.delete(className, {
           'objectId': items[0].id
-        }, items[0]._queryCondition, items[0]._returnKeys, client);
+        }, items[0]._queryCondition, [], client);
       }
     }
   };

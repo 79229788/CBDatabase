@@ -110,8 +110,18 @@ const Table3 = CB.Object.extend('Table3');
 //   console.log(data.toOrigin());
 // });
 
-
-
+//********删除数据
+// CB.Cloud.Transaction(async (client) => {
+//   const table1 = new Table1();
+//   //table1.id = 'ryZjpzD7fm';
+//   table1.setQuery(new CB.Query().equalTo('name', '表格一'));
+//   table1.setReturnKeys(['table']);
+//   const data = await table1.destroy(client);
+//   console.log('ok', data[0]);
+//   throw new Error('force error');
+// }).catch(error => {
+//   console.log(error);
+// });
 
 
 
