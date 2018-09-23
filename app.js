@@ -117,7 +117,7 @@ const Table3 = CB.Object.extend('Table3');
 //   table1.setQuery(new CB.Query().equalTo('name', '表格一'));
 //   table1.setReturnKeys(['table']);
 //   const data = await table1.destroy(client);
-//   console.log('ok', data[0]);
+//   console.log('ok', data[0].get('table'));
 //   throw new Error('force error');
 // }).catch(error => {
 //   console.log(error);

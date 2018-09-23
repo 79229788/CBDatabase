@@ -93,11 +93,10 @@ CB._traverse = function (object, cb) {
 /**
  * 编码对象（普通对象 -> CBObject）
  * @param object
- * @param key
  * @return {*}
  * @private
  */
-CB._encode = function (object, key) {
+CB._encode = function (object) {
   if(!_.isObject(object) || _.isDate(object)) return object;
   if(_.isArray(object)) return object.map(child => CB._encode(child));
   if(object instanceof CB.Object) return object;
@@ -116,7 +115,7 @@ CB._encode = function (object, key) {
     return pointer;
   }
   if(object.__type === 'Relation') {
-    if(!key) throw new Error('key missing encoding a Relation');
+    if(!object.key) throw new Error('key missing encoding a Relation');
     return new CB.Relation(object.className, object.relationId, object.key);
   }
   if(object.__type === 'File') {

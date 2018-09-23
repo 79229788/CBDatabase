@@ -72,12 +72,12 @@ module.exports = function (CB) {
         const object = {};
         _.each(key, (v, k) => {
           checkReservedKey(k);
-          object[k] = CB._encode(v, k);
+          object[k] = CB._encode(v);
         });
         attrs = _.extend({}, this.attributes, object);
       }else {
         checkReservedKey(key);
-        attrs[key] = CB._encode(value, key);
+        attrs[key] = CB._encode(value);
       }
       if(attrs.objectId) this.id = attrs.objectId;
       if(attrs.className) this._className = attrs.className;
@@ -552,6 +552,7 @@ module.exports = function (CB) {
    */
   CB.Object._assignSavedData = function (savedData, model) {
     if(!savedData || JSON.stringify(savedData) === '{}') return;
+    savedData = CB._encode(savedData);
     model.id = savedData.objectId;
     model.attributes.createdAt = savedData.createdAt;
     model.attributes.updatedAt = savedData.updatedAt;
