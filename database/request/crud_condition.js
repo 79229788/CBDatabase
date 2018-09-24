@@ -135,8 +135,9 @@ module.exports = function (className, object, index) {
         (ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) IS NULL
         OR ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = 0)
         `;
+      }else {
+        res.clause = `ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = $${index + 1}`;
       }
-      res.clause = `ARRAY_LENGTH("${className}"."${object.key}", ${object.dim || 1}) = $${index + 1}`;
       res.value = object.value;
       res.index = index;
       break;
