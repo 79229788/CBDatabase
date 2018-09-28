@@ -7,6 +7,7 @@ module.exports.tables = [
       {name: 'objectId', type: 'text', isPrimary: true},
       {name: 'createdAt', type: 'timestamp'},
       {name: 'updatedAt', type: 'timestamp'},
+      {name: 'category', type: 'text'},
       {name: 'name', type: 'text'},
       {name: 'url', type: 'text'},
       {name: 'provider', type: 'text'},
