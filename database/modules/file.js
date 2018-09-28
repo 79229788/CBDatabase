@@ -190,6 +190,7 @@ module.exports = function (CB) {
         });
       }
       switch (key) {
+        case 'category':
         case 'name':
         case 'url':
         case 'mimeType':
