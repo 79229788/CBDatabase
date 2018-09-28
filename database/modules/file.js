@@ -153,6 +153,14 @@ module.exports = function (CB) {
       this.rootName = name;
     },
     /**
+     * 设置分类
+     * @param cate
+     */
+    setCategory: function (cate) {
+      if(!cate) return;
+      this.set('category', cate);
+    },
+    /**
      * 获取数据
      * @param attrName
      * @return {*}
