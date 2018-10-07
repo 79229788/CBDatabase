@@ -129,7 +129,7 @@ module.exports = function (CB) {
       return this;
     },
     /**
-     * 增量操作json [9.5版本及以上可以用||操作符轻易实现，暂不实现该方法]
+     * 增量操作jsonb [9.5版本及以上可以用||操作符轻易实现，暂不实现该方法]
      * @param key
      * @param value
      * @return {CB.Object}
