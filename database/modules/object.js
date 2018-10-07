@@ -101,7 +101,7 @@ module.exports = function (CB) {
       });
     },
     /**
-     * 设置增量数据
+     * 增量操作数值
      * @param key
      * @param value
      * @return {CB}
@@ -115,7 +115,7 @@ module.exports = function (CB) {
       return this;
     },
     /**
-     * 增量日期间隔
+     * 增量操作日期
      * @param key
      * @param value
      * @param type
@@ -128,7 +128,16 @@ module.exports = function (CB) {
       this.set(key + ':[action]incrementDate', `${value} ${type}`);
       return this;
     },
+    /**
+     * 增量操作json [9.5版本及以上可以用||操作符轻易实现，暂不实现该方法]
+     * @param key
+     * @param value
+     * @return {CB.Object}
+     */
+    _incrementJson: function (key, value) {
 
+      return this;
+    },
     /**
      * 给数组属性添加元素(在后面追加)
      * @param key
