@@ -77,7 +77,7 @@ module.exports = function (CB) {
     isAuthenticated: async function (sessionToken) {
       if(!this.id) return false;
       if(!sessionToken && !this.getSessionToken()) throw new Error('isAuthenticated: 当前User对象上没有sessionToken, 无法进行验证！');
-      const _sessionToken = this.getSessionTokenFromCache();
+      const _sessionToken = await this.getSessionTokenFromCache();
       return _sessionToken === (sessionToken || this.getSessionToken());
     },
     /**
