@@ -15,7 +15,7 @@ module.exports = function (CB) {
       this._className = _.isString(name) ? name : name.prototype.className;
     },
     /**
-     * 登陆时禁止刷新SessionToken[卡布账号登陆时]
+     * 登陆时禁止刷新SessionToken[账号登陆时]
      */
     disabledRefreshSessionToken: function (value = false) {
       this._disabledRefreshSessionToken = value;
@@ -77,15 +77,22 @@ module.exports = function (CB) {
     isAuthenticated: async function (sessionToken) {
       if(!this.id) return false;
       if(!sessionToken && !this.getSessionToken()) throw new Error('isAuthenticated: 当前User对象上没有sessionToken, 无法进行验证！');
-      const _sessionToken = await CB.sessionRedis.getTemporary(this.id);
+      const _sessionToken = this.getSessionTokenFromCache();
       return _sessionToken === (sessionToken || this.getSessionToken());
     },
     /**
-     * 获取sessionToken
+     * 获取当前对象中的sessionToken
      * @return {*}
      */
     getSessionToken: function () {
       return this._sessionToken;
+    },
+    /**
+     * 从缓存中获取SessionToken
+     * @return {Promise<*>}
+     */
+    getSessionTokenFromCache: async function () {
+      return await CB.sessionRedis.getTemporary(this.id);
     },
     /**
      * 刷新sessionToken(会导致登陆失效)
