@@ -307,6 +307,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     equalTo: function (key, value, name) {
+      if(value === null) return this.notExist(key, name);
       if(value instanceof CB.Object || value instanceof CB.File) {
         return this._jsonCondition(key, 'objectId', value.id, name, 'equalInJson');
       }
@@ -335,6 +336,7 @@ module.exports = function (CB) {
      * @return {*}
      */
     notEqualTo: function (key, value, name) {
+      if(value === null) return this.exist(key, name);
       return this._baseCondition(key, value, name, 'notEqual');
     },
     /**
