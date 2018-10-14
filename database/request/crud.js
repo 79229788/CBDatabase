@@ -91,6 +91,7 @@ module.exports = function (CB) {
     const floatColumns = [];
     const objectColumns = [];
     const dateColumns = [];
+    const datetimeColumns = [];
     const stringColumns = [];
     (function findColumns(table, isParent) {
       if(!table) return;
@@ -107,6 +108,7 @@ module.exports = function (CB) {
             || column.type.indexOf('decimal') === 0
           ) floatColumns.push(column);
           if(column.type === 'date') dateColumns.push(column);
+          if(column.type === 'timestamp') datetimeColumns.push(column);
           if(column.type === 'object') objectColumns.push(column);
           if(column.type === 'text'
             || column.type.indexOf('char') === 0
@@ -150,6 +152,11 @@ module.exports = function (CB) {
     dateColumns.forEach((column) => {
       const origin = row[column.name];
       row[column.name] = origin ? moment(origin).format('YYYY-MM-DD') : '';
+    });
+    //处理日期时间数据
+    datetimeColumns.forEach((column) => {
+      const origin = row[column.name];
+      row[column.name] = origin ? moment(origin).format('YYYY-MM-DD HH:mm:ss') : '';
     });
   };
   /**
