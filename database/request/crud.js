@@ -71,22 +71,23 @@ module.exports = function (CB) {
    *
    * @param row
    * @param className
-   * @param selectItems
+   * @param selectMap
    */
-  const compatibleDataType = (row, className, selectItems) => {
+  const compatibleDataType = (row, className, selectMap) => {
     _.each(row, (value, key) => {
       if(_.isArray(value)) {
         value.forEach(item => {
-          compatibleDataType({_: item}, className, []);
+          compatibleDataType({_: item}, className, {});
         });
       }
       if(_.isObject(value) && ['Pointer', 'File'].indexOf(value.__type) > -1 && Object.keys(value).length > 3) {
-        compatibleDataType(value, value.className, []);
+        compatibleDataType(value, value.className, selectMap[key]);
       }
       if(['createdAt', 'updatedAt'].indexOf(key) > -1) {
         row[key] = new Date(value);
       }
     });
+    const selectItems = selectMap.selects || [];
     //搜索需要的列选项
     const floatColumns = [];
     const objectColumns = [];
@@ -163,23 +164,23 @@ module.exports = function (CB) {
    * 处理服务器数据[合并连接字段和处理数据类型]
    * @param rows
    * @param className
-   * @param selectItems
+   * @param selectMap
    */
-  const handleServerData = (rows, className, selectItems) => {
+  const handleServerData = (rows, className, selectMap) => {
     rows.forEach((row) => {
       mergeChildren(row);
-      compatibleDataType(row, className, selectItems);
+      compatibleDataType(row, className, selectMap);
     });
   };
   /**
    * 仅仅处理服务器数据类型
    * @param rows
    * @param className
-   * @param selectItems
+   * @param selectMap
    */
-  const handleServerDataType = (rows, className, selectItems) => {
+  const handleServerDataType = (rows, className, selectMap) => {
     rows.forEach((row) => {
-      compatibleDataType(row, className, selectItems);
+      compatibleDataType(row, className, selectMap);
     });
   };
   /**
@@ -208,7 +209,7 @@ module.exports = function (CB) {
     }
     const selectClause = selectClauseList.length > 0
       ? selectClauseList.join(',')
-      : '"${className}".*';
+      : `"${className}".*`;
     //****************
     //*****连接查询
     //*****
@@ -557,7 +558,13 @@ module.exports = function (CB) {
           case 'first':
           case 'find':
             const rows = result.rows;
-            handleServerData(rows, unionClassName || className, _.flatten(unionSelectCollection || opts.selectCollection));
+            const selectMap = {};
+            selectMap.selects = _.flatten(unionSelectCollection || opts.selectCollection);
+            (opts.includeCollection || []).forEach(item => {
+              const keys = item.key.replace('^', '');
+              _.set(selectMap, keys, {selects: _.flatten(item.selectCollection || [])});
+            });
+            handleServerData(rows, unionClassName || className, selectMap);
             if(type === 'first') return rows[0] || null;
             return rows;
           case 'count':
@@ -649,7 +656,7 @@ module.exports = function (CB) {
         const result = await _client.query(sql, params);
         if(result.rowCount === 0) return null;
         if(returningValues.length > 0) {
-          handleServerDataType(result.rows, className, []);
+          handleServerDataType(result.rows, className, {});
           result.rows.forEach((row) => {
             _.each(object, (value, key) => {
               if(key.indexOf(':[action]') > 0) {
@@ -769,7 +776,7 @@ module.exports = function (CB) {
         const result = await _client.query(sql, params);
         if(result.rowCount === 0) return null;
         if(returningValues.length > 0) {
-          handleServerDataType(result.rows, className, []);
+          handleServerDataType(result.rows, className, {});
           result.rows.forEach((row) => {
             _.each(object, (value, key) => {
               if(key.indexOf(':[action]') > 0) {
@@ -858,7 +865,7 @@ module.exports = function (CB) {
       try {
         const result = await _client.query(sql, params);
         if(result.rowCount === 0) return null;
-        handleServerDataType(result.rows, className, []);
+        handleServerDataType(result.rows, className, {});
         return result.rows;
       }catch (error) {
         //*****表不存在时，直接返回成功状态[强制忽略错误，会影响事务功能，请谨慎处理事务中表不存在表操作]
