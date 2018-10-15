@@ -194,18 +194,21 @@ module.exports = function (CB) {
    */
   const getFindClauses = (className, selectCollection, includeCollection, conditionCollection, conditionJoins, orderCollection) => {
     //****************
-    //*****指定查询列
+    //*****指定主查询列
     //*****
-    let selectClause = `"${className}".*`;
+    const selectClauseList = [];
     if(selectCollection.length > 0) {
       const selects = _.flatten(selectCollection);
       if(selects.indexOf('objectId') < 0) selects.unshift('objectId');
       if(selects.indexOf('createdAt') < 0) selects.push('createdAt');
       if(selects.indexOf('updatedAt') < 0) selects.push('updatedAt');
-      selectClause = selects.map((value) => {
-        return `"${className}"."${value}"`;
-      }).join(',');
+      selects.forEach(select => {
+        selectClauseList.push(`"${className}"."${select}"`);
+      });
     }
+    const selectClause = selectClauseList.length > 0
+      ? selectClauseList.join(',')
+      : '"${className}".*';
     //****************
     //*****连接查询
     //*****
@@ -214,7 +217,7 @@ module.exports = function (CB) {
     if(includeCollection.length > 0) {
       isExistJointArray = !!_.find(includeCollection, {type: 'array'});
       if(isExistJointArray) joinsGroupClause = `GROUP BY "${className}"."objectId"`;
-      _.each(includeCollection, (object) => {
+      includeCollection.forEach((object) => {
         let _className = className, _tailKey = object.key.replace('^', '');
         if(object.key.indexOf('.') > -1) {
           const arr = object.key.split('.');
@@ -225,9 +228,24 @@ module.exports = function (CB) {
         }
         const joinClassOrigin = object.className; //连接表的原名
         const joinClassAlias = object.className = `${joinClassOrigin}_${_tailKey}_alias`; //连接表设置别名(防止不重复)
+        //***获取连接表中的select数据
+        const selectKeyValueList = [];
+        if(object.selectCollection.length > 0) {
+          const selects = _.flatten(object.selectCollection);
+          if(selects.indexOf('objectId') < 0) selects.unshift('objectId');
+          if(selects.indexOf('createdAt') < 0) selects.push('createdAt');
+          if(selects.indexOf('updatedAt') < 0) selects.push('updatedAt');
+          selects.forEach(select => {
+            selectKeyValueList.push(`'${select}',"${joinClassAlias}"."${select}"`);
+          });
+        }
+        const rowToJsonClause = selectKeyValueList.length > 0
+          ? `JSON_BUILD_OBJECT(${selectKeyValueList.join(',')})`
+          : `ROW_TO_JSON("${joinClassAlias}".*)`;
+        //***处理连接表相关语句
         if(object.type === 'array') {
           joinsSelectClause += `
-              ,CASE WHEN COUNT("${joinClassAlias}") = 0 THEN '[]' ELSE JSON_AGG(TO_JSON("${joinClassAlias}")) END AS "${object.key}"
+              ,CASE WHEN COUNT("${joinClassAlias}") = 0 THEN '[]' ELSE JSON_AGG(${rowToJsonClause}) END AS "${object.key}"
             `;
           joinsRelationClause += `
               LEFT JOIN LATERAL UNNEST("${_className}"."${_tailKey}") "${_className}_${_tailKey}_iterator" ON true
@@ -237,14 +255,14 @@ module.exports = function (CB) {
         }else {
           if(isExistJointArray) {
             joinsSelectClause += `
-                ,JSON_AGG(TO_JSON("${joinClassAlias}")) -> 0 AS "${object.key}"
+                ,JSON_AGG(${rowToJsonClause}) -> 0 AS "${object.key}"
               `;
             joinsGroupClause += `
                 ,"${joinClassAlias}"."objectId"
               `;
           }else {
             joinsSelectClause += `
-                ,ROW_TO_JSON("${joinClassAlias}") AS "${object.key}"
+                ,${rowToJsonClause} AS "${object.key}"
               `;
           }
           joinsRelationClause += `

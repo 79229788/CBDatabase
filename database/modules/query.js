@@ -71,6 +71,7 @@ module.exports = function (CB) {
     if(relationId) this.className += '@_@' + relationId;
     this.isInnerQuery = true;
     this._queryOptions = {
+      selectCollection: [],
       includeCollection: [],
       conditionCollection: [],
       conditionJoins: '',
@@ -155,8 +156,9 @@ module.exports = function (CB) {
      * 例如：product.cate.user
      * @param objectClass
      * @param relationId
+     * @param option
      */
-    include: function (key, objectClass, relationId) {
+    include: function (key, objectClass, relationId, option = {}) {
       if(!objectClass) throw new Error('调用CB.Query的include方法，必须设置第二个参数(objectClass)');
       let className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
       if(relationId) className += '@_@' + relationId;
@@ -167,7 +169,8 @@ module.exports = function (CB) {
           _.extend(item, {
             key: _key,
             type: 'single',
-            className: className
+            className: className,
+            selectCollection: option.selects || []
           });
           break;
         }
@@ -175,7 +178,8 @@ module.exports = function (CB) {
       if(!exist) this._queryOptions.includeCollection.push({
         key: _key,
         type: 'single',
-        className: className
+        className: className,
+        selectCollection: option.selects || []
       });
     },
     /**
@@ -184,8 +188,9 @@ module.exports = function (CB) {
      * 例如：product.cate.levels，该类型只能作为最后一层出现
      * @param objectClass
      * @param relationId
+     * @param option
      */
-    includeArray: function (key, objectClass, relationId) {
+    includeArray: function (key, objectClass, relationId, option = {}) {
       if(!objectClass) throw new Error('[CB.Query] include方法，必须设置第二个参数(objectClass)');
       let className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
       if(relationId) className += '@_@' + relationId;
@@ -196,7 +201,8 @@ module.exports = function (CB) {
           _.extend(item, {
             key: _key,
             type: 'array',
-            className: className
+            className: className,
+            selectCollection: option.selects || []
           });
           break;
         }
@@ -204,7 +210,8 @@ module.exports = function (CB) {
       if(!exist) this._queryOptions.includeCollection.push({
         key: _key,
         type: 'array',
-        className: className
+        className: className,
+        selectCollection: option.selects || []
       });
     },
     /**
@@ -231,7 +238,7 @@ module.exports = function (CB) {
      */
     includeQuery: function (key, object) {
       _.remove(this._queryOptions.includeCollection, item => item.key === key);
-      if(!(object instanceof CB.InnerQuery)) throw new Error('[CB.Query] matchesQuery方法，查询对象必须使用CB.InnerQuery构建');
+      if(!(object instanceof CB.InnerQuery)) throw new Error('[CB.Query] includeQuery方法，查询对象必须使用CB.InnerQuery构建');
       let exist = false, _key = `^${key}`;
       for(let item of this._queryOptions.includeCollection) {
         if(item.key === _key) {
@@ -242,7 +249,8 @@ module.exports = function (CB) {
             className: object.className,
             conditionJoins: object._queryOptions.conditionJoins,
             conditionCollection: object._queryOptions.conditionCollection,
-            orderCollection: object._queryOptions.orderCollection
+            orderCollection: object._queryOptions.orderCollection,
+            selectCollection: object._queryOptions.selectCollection
           });
           break;
         }
@@ -253,7 +261,8 @@ module.exports = function (CB) {
         className: object.className,
         conditionJoins: object._queryOptions.conditionJoins,
         conditionCollection: object._queryOptions.conditionCollection,
-        orderCollection: object._queryOptions.orderCollection
+        orderCollection: object._queryOptions.orderCollection,
+        selectCollection: object._queryOptions.selectCollection
       });
       object._queryOptions.includeCollection.forEach(innerItem => {
         let exist = false, _key = `^${key}.${innerItem.key.replace(/^\^/, '')}`;

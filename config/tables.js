@@ -27,6 +27,7 @@ module.exports.tables = [
       {name: 'number', type: 'smallint', default: 0},
       {name: 'array', type: 'text[]'},
       {name: 'table', type: 'pointer'},
+      {name: 'tables', type: 'pointer[]'},
       {name: 'file', type: 'file'},
     ]
   },
