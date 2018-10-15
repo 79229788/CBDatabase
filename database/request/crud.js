@@ -81,7 +81,7 @@ module.exports = function (CB) {
         });
       }
       if(_.isObject(value) && ['Pointer', 'File'].indexOf(value.__type) > -1 && Object.keys(value).length > 3) {
-        compatibleDataType(value, value.className, selectMap[key]);
+        compatibleDataType(value, value.className, selectMap[key] || {});
       }
       if(['createdAt', 'updatedAt'].indexOf(key) > -1) {
         row[key] = new Date(value);
