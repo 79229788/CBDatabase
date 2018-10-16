@@ -15,8 +15,8 @@ CB.initPG({
   database        : 'test',
   tableList       : config_tables.tables,
   checkTable      : true,
-  printSql        : true,
-  printSqlParams  : true
+  printSql        : false,
+  printSqlParams  : false
 });
 CB.initOSS({
   endpoint        : config_oss.oss.endpoint,
@@ -35,9 +35,10 @@ const Table2 = CB.Object.extend('Table2');
 const Table3 = CB.Object.extend('Table3');
 
 const query = new CB.Query(Table1);
-query.select('name', 'table');
+query.select('name', 'table', 'tables');
 query.include('table', Table2, null, {selects: ['name', 'table']});
 query.include('table.table', Table3, null, {selects: ['name']});
+query.includeArray('tables', Table2, null, {selects: ['name']});
 query.first().then(data => {
   console.log('@@@@@@@@@@@');
   console.log(data.toOrigin());
