@@ -166,7 +166,7 @@ module.exports = function (CB) {
           && ['Pointer', 'File'].indexOf(value[0].__type) > -1
           && Object.keys(value[0]).length > 3) {
           value.forEach(item => {
-            handleCompatibleDataType(item, item.className, selectMap.selects);
+            handleCompatibleDataType(item, item.className, selectMap[key].selects);
           });
         }
         //***如果为对象，继续遍历
