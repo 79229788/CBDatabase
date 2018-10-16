@@ -155,49 +155,29 @@ module.exports = function (CB) {
    * @param selectMap
    */
   const compatibleDataType = (row, className, selectMap) => {
-    //***重新整理row关系表
-    const rowRelationMap = {};
-    (function loop(row, key, map) {
-      if(!map.row) map.row = {};
-      for(let k in row) {
-        const v = row[k];
+    //***处理第一层
+    handleCompatibleDataType(row, className, selectMap.selects);
+    //***处理内嵌层
+    (function loop(row, selectMap) {
+      for(let key in row) {
+        const value = row[key];
         //***如果为数组检查数组(因为内嵌查询只要到数组就终止的特点，因为无需再对数组继续遍历)
-        if(_.isArray(v) > 0 && _.isObject(v[0])
-          && ['Pointer', 'File'].indexOf(v[0].__type) > -1
-          && Object.keys(v[0]).length > 3) {
-          map[k] = { row: v };
+        if(_.isArray(value) > 0 && _.isObject(value[0])
+          && ['Pointer', 'File'].indexOf(value[0].__type) > -1
+          && Object.keys(value[0]).length > 3) {
+          value.forEach(item => {
+            handleCompatibleDataType(item, item.className, selectMap.selects);
+          });
         }
         //***如果为对象，继续遍历
-        else if(_.isObject(v)
-          && ['Pointer', 'File'].indexOf(v.__type) > -1
-          && Object.keys(v).length > 3) {
-          if(!map[k]) map[k] = {};
-          loop(v, k, map[k]);
-        }
-        //其它类型进行数据处理
-        else {
-          map.row[k] = v;
+        else if(_.isObject(value)
+          && ['Pointer', 'File'].indexOf(value.__type) > -1
+          && Object.keys(value).length > 3) {
+          loop(value, selectMap[key]);
+          handleCompatibleDataType(value, value.className, selectMap[key].selects);
         }
       }
-    })(row, null, rowRelationMap);
-
-    //***对所有关系表进行处理
-    (function loop(rowMap, selectMap) {
-      for(let key in rowMap) {
-        const value = rowMap[key];
-        if(key !== 'row') {
-          loop(rowMap[key], selectMap[key]);
-        }else {
-          if(_.isArray(value)) {
-            value.forEach(item => {
-              handleCompatibleDataType(item, item.className, selectMap.selects);
-            });
-          }else {
-            handleCompatibleDataType(value, value.className || className, selectMap.selects);
-          }
-        }
-      }
-    })(rowRelationMap, selectMap);
+    })(row, selectMap);
   };
   /**
    * 处理服务器数据[合并连接字段和处理数据类型]
