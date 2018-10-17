@@ -453,7 +453,7 @@ module.exports = function (CB) {
                 child.changeClass(child._belongTo);
               }
               const saveObject = child._toSaveOrigin();
-              if(Object.keys(saveObject).length > 0) {
+              if(_.size(saveObject) > 0) {
                 const savedData = child._observeObjectId
                   ? await CB.crud.save(child.className, saveObject, child._queryCondition, child._returnKeys, client)
                   : await CB.crud.update(child.className, saveObject, child._queryCondition, child._returnKeys, client);
@@ -471,7 +471,7 @@ module.exports = function (CB) {
           model.changeClass(model._belongTo);
         }
         const saveObject = model._toSaveOrigin();
-        if(Object.keys(saveObject).length > 0) {
+        if(_.size(saveObject) > 0) {
           const savedData = model._observeObjectId
             ? await CB.crud.save(model.className, saveObject, model._queryCondition, model._returnKeys, client)
             : await CB.crud.update(model.className, saveObject, model._queryCondition, model._returnKeys, client);

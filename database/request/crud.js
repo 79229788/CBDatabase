@@ -632,7 +632,7 @@ module.exports = function (CB) {
      * @return {Promise}
      */
     create: async function (className, object, returnKeys, client) {
-      if(Object.keys(object).length === 0) return;
+      if(_.size(object) === 0) return;
       Object.assign(object, {
         objectId: shortId.generate(),
         createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -708,7 +708,7 @@ module.exports = function (CB) {
      * @return {Promise}
      */
     update: async function (className, object, condition, returnKeys, client) {
-      if(Object.keys(object).length === 0) return;
+      if(_.size(object) === 0) return;
       let index = 0;
       //重新得到要更新的object
       Object.assign(object, {
