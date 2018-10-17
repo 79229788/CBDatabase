@@ -63,7 +63,7 @@ module.exports = function(CB) {
     },
   };
   return function (options) {
-    const opts = _.extend({
+    const opts = Object.assign({
       name: 'sess',
       secret: 'secret',
       maxAge: 0,

@@ -414,7 +414,7 @@ module.exports = function (CB) {
       const isUnionQuery = !!options.queryOptionsCollection;
       let opts = {};
       if(!isUnionQuery) {
-        opts = _.extend({
+        opts = Object.assign({
           skip: 0,
           limit: 1000,
           //***仅仅查询自己（仅仅用于继承表）
@@ -438,7 +438,7 @@ module.exports = function (CB) {
           orderCollection: [],
         }, options || {});
       }else {
-        opts = _.extend({
+        opts = Object.assign({
           queryOptionsCollection: [], //见单个查询的所有条件（除了排序和数量限制）
           isUnionAll: true,
           orderCollection: [],
@@ -632,8 +632,8 @@ module.exports = function (CB) {
      * @return {Promise}
      */
     create: async function (className, object, returnKeys, client) {
-      if(_.size(object) === 0) return;
-      _.extend(object, {
+      if(Object.keys(object).length === 0) return;
+      Object.assign(object, {
         objectId: shortId.generate(),
         createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
         updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
@@ -708,10 +708,10 @@ module.exports = function (CB) {
      * @return {Promise}
      */
     update: async function (className, object, condition, returnKeys, client) {
-      if(_.size(object) === 0) return;
+      if(Object.keys(object).length === 0) return;
       let index = 0;
       //重新得到要更新的object
-      _.extend(object, {
+      Object.assign(object, {
         updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
       });
       const tmpObject = _.clone(object);

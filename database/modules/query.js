@@ -198,7 +198,7 @@ module.exports = function (CB) {
       for(let item of this._queryOptions.includeCollection) {
         exist = item.key === _key;
         if(exist) {
-          _.extend(item, {
+          Object.assign(item, {
             key: _key,
             type: 'array',
             className: className,
@@ -243,7 +243,7 @@ module.exports = function (CB) {
       for(let item of this._queryOptions.includeCollection) {
         if(item.key === _key) {
           exist = true;
-          _.extend(item, {
+          Object.assign(item, {
             key: _key,
             type: 'single',
             className: object.className,
@@ -269,7 +269,7 @@ module.exports = function (CB) {
         for(let outerItem of this._queryOptions.includeCollection) {
           if(outerItem.key === _key) {
             exist = true;
-            _.extend(outerItem, {
+            Object.assign(outerItem, {
               key: _key,
               type: innerItem.type,
               className: innerItem.className,
@@ -726,11 +726,11 @@ module.exports = function (CB) {
       if(data.length === 0) return [];
       return data.map((item) => {
         if(this.isUserQuery) {
-          return new CB.User(_.extend(item, {
+          return new CB.User(Object.assign(item, {
             className: this.className
           }));
         }
-        return new CB.Object(_.extend(item, {
+        return new CB.Object(Object.assign(item, {
           className: this.className
         }));
       });
@@ -744,11 +744,11 @@ module.exports = function (CB) {
       const data = await CB.crud.find(this.className, 'first', this._unionQueryOptions || this._queryOptions, client);
       if(!data) return null;
       if(this.isUserQuery) {
-        return new CB.User(_.extend(data, {
+        return new CB.User(Object.assign(data, {
           className: this.className
         }));
       }
-      return new CB.Object(_.extend(data, {
+      return new CB.Object(Object.assign(data, {
         className: this.className
       }));
     },

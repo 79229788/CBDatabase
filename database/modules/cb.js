@@ -22,7 +22,7 @@ const inherits = function (parent, protoProps, staticProps) {
     };
   }
   // Inherit class (static) properties from parent.
-  _.extend(child, parent);
+  Object.assign(child, parent);
   // Set the prototype chain to inherit from `parent`, without calling
   // `parent`'s constructor function.
   EmptyConstructor.prototype = parent.prototype;
@@ -30,11 +30,11 @@ const inherits = function (parent, protoProps, staticProps) {
   // Add prototype properties (instance properties) to the subclass,
   // if supplied.
   if (protoProps) {
-    _.extend(child.prototype, protoProps);
+    Object.assign(child.prototype, protoProps);
   }
   // Add static properties to the constructor function, if supplied.
   if (staticProps) {
-    _.extend(child, staticProps);
+    Object.assign(child, staticProps);
   }
   // Correctly set child's `prototype.constructor`.
   child.prototype.constructor = child;
@@ -137,7 +137,7 @@ CB._decode = function (object, hiddenFields = []) {
   if(_.isDate(object)) return CB._parseDate(object);
   if(_.isArray(object)) return _.map(object, child => CB._decode(child, hiddenFields));
   if(object instanceof CB.Object || object instanceof CB.File) {
-    const origin = _.extend(object.getPointer(), object.attributes);
+    const origin = Object.assign(object.getPointer(), object.attributes);
     origin.className = origin.className.split('@_@')[0];
     delete origin.objectId;
     if(object.id) origin.objectId = object.id;

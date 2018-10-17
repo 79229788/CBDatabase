@@ -330,7 +330,7 @@ module.exports = function (CB) {
    * @return {Promise.<void>}
    */
   CB.User.login = async function (username, password, childClass, queryBlock, options, client) {
-    const opts = _.extend({
+    const opts = Object.assign({
       disabledRefreshSessionToken: false,
       forceLogin: false,
     }, options);
@@ -353,7 +353,7 @@ module.exports = function (CB) {
    * @return {Promise.<*|Promise.<void>>}
    */
   CB.User.logInWithMobilePhone = async function (mobilePhoneNumber, password, childClass, queryBlock, options, client) {
-    const opts = _.extend({
+    const opts = Object.assign({
       disabledRefreshSessionToken: false,
       forceLogin: false,
     }, options);
@@ -376,7 +376,7 @@ module.exports = function (CB) {
    * @return {Promise.<*|Promise.<void>>}
    */
   CB.User.logInWithEmail = async function (email, password, childClass, queryBlock, options, client) {
-    const opts = _.extend({
+    const opts = Object.assign({
       disabledRefreshSessionToken: false,
       forceLogin: false,
     }, options);
