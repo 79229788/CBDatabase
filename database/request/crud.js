@@ -38,10 +38,10 @@ module.exports = function (CB) {
                 }else {
                   if(_.isArray(next.value[current.key])) {
                     next.value[current.key].forEach((item, index) => {
-                      Object.assign(item, current.value[index]);
+                      if(item) Object.assign(item, current.value[index]);
                     });
                   }else {
-                    Object.assign(next.value[current.key], current.value);
+                    if(next.value[current.key]) Object.assign(next.value[current.key], current.value);
                   }
                 }
               }
@@ -56,10 +56,10 @@ module.exports = function (CB) {
         }else {
           if(_.isArray(row[relation.key])) {
             row[relation.key].forEach((item, index) => {
-              Object.assign(item, relation.value[index]);
+              if(item) Object.assign(item, relation.value[index]);
             });
           }else {
-            Object.assign(row[relation.key], relation.value);
+            if(row[relation.key]) Object.assign(row[relation.key], relation.value);
           }
         }
       });
@@ -558,8 +558,8 @@ module.exports = function (CB) {
           `);
         });
         let orderClause = 'ORDER BY ' + (opts.orderCollection.length === 0
-            ? '"createdAt" asc'
-            : opts.orderCollection.map(orderObject => `"${orderObject.key}" ${orderObject.type}`).join(', '));
+          ? '"createdAt" asc'
+          : opts.orderCollection.map(orderObject => `"${orderObject.key}" ${orderObject.type}`).join(', '));
         if(type === 'count') orderClause = '';
         //*****组合成sql语句
         sql = `
@@ -808,8 +808,8 @@ module.exports = function (CB) {
             returningValues
               .map(item => item.replace(/^"(\S*)"$/, '$1'))
               .forEach((key) => {
-              object[key] = row[key];
-            });
+                object[key] = row[key];
+              });
           });
         }
         return object;
