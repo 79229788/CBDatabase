@@ -471,10 +471,12 @@ module.exports = function (CB) {
           model.changeClass(model._belongTo);
         }
         const saveObject = model._toSaveOrigin();
-        saveResult = model._observeObjectId
-          ? await CB.crud.save(model.className, saveObject, model._queryCondition, model._returnKeys, client)
-          : await CB.crud.update(model.className, saveObject, model._queryCondition, model._returnKeys, client);
-        if(!saveResult) return null;
+        if(_.size(saveObject) > 0) {
+          const saveResult = model._observeObjectId
+            ? await CB.crud.save(model.className, saveObject, model._queryCondition, model._returnKeys, client)
+            : await CB.crud.update(model.className, saveObject, model._queryCondition, model._returnKeys, client);
+          if(!saveResult) return null;
+        }
         CB.Object._assignSavedData(saveObject, model);
       }catch (error) {
         throw CB.Error(error.code, error.message);
