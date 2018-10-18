@@ -72,6 +72,7 @@ module.exports = function (CB) {
    * @param selectItems
    */
   const handleCompatibleDataType = function (row, className, selectItems) {
+    selectItems = selectItems || [];
     //搜索需要的列选项
     const floatColumns = [];
     const objectColumns = [];

@@ -452,11 +452,11 @@ module.exports = function (CB) {
                 ].concat(child._belongToOptions || []), client);
                 child.changeClass(child._belongTo);
               }
-              let saveObject = child._toSaveOrigin();
-              if(_.size(saveObject) > 0) {
-                saveObject = child._observeObjectId
-                  ? await CB.crud.save(child.className, saveObject, child._queryCondition, child._returnKeys, client)
-                  : await CB.crud.update(child.className, saveObject, child._queryCondition, child._returnKeys, client);
+              const saveObject = child._toSaveOrigin();
+              if(child._observeObjectId) {
+                await CB.crud.save(child.className, saveObject, child._queryCondition, child._returnKeys, client);
+              }else {
+                await CB.crud.update(child.className, saveObject, child._queryCondition, child._returnKeys, client);
               }
               CB.Object._assignSavedData(saveObject, child);
             }
@@ -470,13 +470,11 @@ module.exports = function (CB) {
           ].concat(model._belongToOptions || []), client);
           model.changeClass(model._belongTo);
         }
-        let saveObject = model._toSaveOrigin();
-        if(_.size(saveObject) > 0) {
-          saveObject = model._observeObjectId
-            ? await CB.crud.save(model.className, saveObject, model._queryCondition, model._returnKeys, client)
-            : await CB.crud.update(model.className, saveObject, model._queryCondition, model._returnKeys, client);
-          if(!saveObject) return null;
-        }
+        const saveObject = model._toSaveOrigin();
+        saveResult = model._observeObjectId
+          ? await CB.crud.save(model.className, saveObject, model._queryCondition, model._returnKeys, client)
+          : await CB.crud.update(model.className, saveObject, model._queryCondition, model._returnKeys, client);
+        if(!saveResult) return null;
         CB.Object._assignSavedData(saveObject, model);
       }catch (error) {
         throw CB.Error(error.code, error.message);
@@ -564,11 +562,12 @@ module.exports = function (CB) {
    * @private
    */
   CB.Object._assignSavedData = function (savedData, model) {
-    if(!savedData || JSON.stringify(savedData) === '{}') return;
-    savedData = CB._encode(savedData);
-    model.id = savedData.objectId;
-    model.attributes.createdAt = savedData.createdAt;
-    model.attributes.updatedAt = savedData.updatedAt;
+    if(_.size(savedData) > 0) {
+      savedData = CB._encode(savedData);
+      model.id = savedData.objectId;
+      model.attributes.createdAt = savedData.createdAt;
+      model.attributes.updatedAt = savedData.updatedAt;
+    }
     _.each(model.attributes, (value, key) => {
       if(key.indexOf(':[action]') > 0) {
         const _key = key.split(':[action]')[0];
