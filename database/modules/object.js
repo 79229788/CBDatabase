@@ -452,13 +452,13 @@ module.exports = function (CB) {
                 ].concat(child._belongToOptions || []), client);
                 child.changeClass(child._belongTo);
               }
-              const saveObject = child._toSaveOrigin();
+              let saveObject = child._toSaveOrigin();
               if(_.size(saveObject) > 0) {
-                const savedData = child._observeObjectId
+                saveObject = child._observeObjectId
                   ? await CB.crud.save(child.className, saveObject, child._queryCondition, child._returnKeys, client)
                   : await CB.crud.update(child.className, saveObject, child._queryCondition, child._returnKeys, client);
-                CB.Object._assignSavedData(savedData, child);
               }
+              CB.Object._assignSavedData(saveObject, child);
             }
           }
         }
@@ -470,14 +470,14 @@ module.exports = function (CB) {
           ].concat(model._belongToOptions || []), client);
           model.changeClass(model._belongTo);
         }
-        const saveObject = model._toSaveOrigin();
+        let saveObject = model._toSaveOrigin();
         if(_.size(saveObject) > 0) {
-          const savedData = model._observeObjectId
+          saveObject = model._observeObjectId
             ? await CB.crud.save(model.className, saveObject, model._queryCondition, model._returnKeys, client)
             : await CB.crud.update(model.className, saveObject, model._queryCondition, model._returnKeys, client);
-          if(!savedData) return null;
-          CB.Object._assignSavedData(savedData, model);
+          if(!saveObject) return null;
         }
+        CB.Object._assignSavedData(saveObject, model);
       }catch (error) {
         throw CB.Error(error.code, error.message);
       }
