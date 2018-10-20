@@ -9,61 +9,60 @@ module.exports = function (CB) {
    * @param row
    */
   const mergeChildren = (row) => {
+    //***生成特殊嵌套结构的关系对象
     const relationMap = {};
     for(let key in row) {
       const value = row[key];
       if(key.indexOf('^') === 0) {
-        const keys = key.substr(1).split('.');
-        const lastKey = keys[keys.length - 1];
-        if(!relationMap[keys.length]) relationMap[keys.length] = [];
-        relationMap[keys.length].push({
-          level: keys.length,
-          key: lastKey,
-          value: value,
-        });
+        const relationKeys = key.substr(1).split('.');
+        let keyIndex = 0;
+        (function loop(map) {
+          let relationKey = relationKeys[keyIndex];
+          //***处理第一层
+          if(!map[relationKey]) {
+            map[relationKey] = {};
+            if(!_.isArray(value)) {
+              map[relationKey].value = value.objectId ? value : null;
+            }else {
+              const list = [];
+              value.forEach(item => {
+                if(item.objectId) list.push(item);
+              });
+              map[relationKey].value = list;
+            }
+            //***处理其它层
+            const pointer = map.value && map.value[relationKey] || null;
+            if(pointer) {
+              if(!_.isArray(pointer)) {
+                if(!value.objectId) {
+                  map.value[relationKey] = null;
+                }else {
+                  Object.assign(pointer, value);
+                }
+              }else {
+                const list = [];
+                if(pointer) {
+                  value.forEach((item, index) => {
+                    if(item.objectId) list.push(Object.assign(pointer[index], item));
+                  });
+                  map.value[relationKey] = list;
+                }
+              }
+            }
+          }else {
+            keyIndex ++;
+            loop(map[relationKey]);
+          }
+        })(relationMap);
         delete row[key];
       }
     }
-    let relationSections = Object.values(relationMap);
-    if(relationSections.length > 0) {
-      relationSections = relationSections.sort((a, b) => b[0].level - a[0].level);
-      relationSections.forEach((section, index) => {
-        if(index + 1 < relationSections.length) {
-          const nextSection = relationSections[index + 1];
-          section.forEach(current => {
-            nextSection.forEach(next => {
-              if(next.value && next.value[current.key]) {
-                if(current.value === null) {
-                  next.value[current.key] = null;
-                }else {
-                  if(_.isArray(next.value[current.key])) {
-                    next.value[current.key].forEach((item, index) => {
-                      if(item) Object.assign(item, current.value[index]);
-                    });
-                  }else {
-                    if(next.value[current.key]) Object.assign(next.value[current.key], current.value);
-                  }
-                }
-              }
-            });
-          });
-        }
-      });
-      const finalRelations = relationSections[relationSections.length - 1];
-      finalRelations.forEach(relation => {
-        if(relation.value === null) {
-          row[relation.key] = null;
-        }else {
-          if(_.isArray(row[relation.key])) {
-            row[relation.key].forEach((item, index) => {
-              if(item) Object.assign(item, relation.value[index]);
-            });
-          }else {
-            if(row[relation.key]) Object.assign(row[relation.key], relation.value);
-          }
-        }
-      });
+    //***调整关系对象的结构为row的结构
+    for(let key in relationMap) {
+      relationMap[key] = relationMap[key].value;
     }
+    //***把关系对象合并至row中
+    Object.assign(row, relationMap);
   };
   /**
    * 处理数据类型
@@ -175,7 +174,7 @@ module.exports = function (CB) {
           && ['Pointer', 'File'].indexOf(value.__type) > -1
           && Object.keys(value).length > 3) {
           loop(value, selectMap[key]);
-          handleCompatibleDataType(value, value.className, selectMap[key].selects);
+          handleCompatibleDataType(value, value.className, (selectMap[key]).selects);
         }
       }
     })(row, selectMap);
