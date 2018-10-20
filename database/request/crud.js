@@ -57,12 +57,10 @@ module.exports = function (CB) {
         delete row[key];
       }
     }
-    //***调整关系对象的结构为row的结构
+    //***将关系对象的数据并合并到row中
     for(let key in relationMap) {
-      relationMap[key] = relationMap[key].value;
+      Object.assign(row[key], relationMap[key].value);
     }
-    //***把关系对象合并至row中
-    Object.assign(row, relationMap);
   };
   /**
    * 处理数据类型
