@@ -22,7 +22,7 @@ module.exports = function (CB) {
           if(!map[relationKey]) {
             map[relationKey] = {};
             if(!_.isArray(value)) {
-              map[relationKey].value = value.objectId ? value : null;
+              map[relationKey].value = value && value.objectId ? value : null;
             }else {
               const list = [];
               value.forEach(item => {
@@ -34,7 +34,7 @@ module.exports = function (CB) {
             const pointer = map.value && map.value[relationKey] || null;
             if(pointer) {
               if(!_.isArray(pointer)) {
-                if(!value.objectId) {
+                if(!value.objectId || !value) {
                   map.value[relationKey] = null;
                 }else {
                   Object.assign(pointer, value);
@@ -43,7 +43,9 @@ module.exports = function (CB) {
                 const list = [];
                 if(pointer) {
                   value.forEach((item, index) => {
-                    if(item.objectId) list.push(Object.assign(pointer[index], item));
+                    if(pointer[index] && item.objectId) {
+                      list.push(Object.assign(pointer[index], item));
+                    }
                   });
                   map.value[relationKey] = list;
                 }
@@ -59,7 +61,9 @@ module.exports = function (CB) {
     }
     //***将关系对象的数据并合并到row中
     for(let key in relationMap) {
-      Object.assign(row[key], relationMap[key].value);
+      if(row[key]) {
+        Object.assign(row[key], relationMap[key].value);
+      }
     }
   };
   /**
