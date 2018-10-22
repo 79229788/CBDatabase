@@ -40,8 +40,8 @@ query.include('table', Table2, null, {selects: ['name', 'table']});
 query.include('table.table', Table3, null, {selects: ['name']});
 query.includeArray('tables', Table2, null, {selects: ['name']});
 query.first().then(data => {
-  console.log('@@@@@@@@@@@');
-  console.log(data.toOrigin());
+  console.log('@@@@@@@@@@@end');
+  console.log(data);
 }).catch(error => {
   console.log(error);
 });

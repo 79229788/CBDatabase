@@ -18,30 +18,41 @@ module.exports = function (CB) {
         let keyIndex = 0;
         (function loop(map) {
           let relationKey = relationKeys[keyIndex];
-          //***处理第一层
           if(!map[relationKey]) {
             map[relationKey] = {};
-            if(!_.isArray(value)) {
-              map[relationKey].value = value && value.objectId ? value : null;
-            }else {
-              const list = [];
-              value.forEach(item => {
-                if(item.objectId) list.push(item);
-              });
-              map[relationKey].value = list;
+            //***处理第一层
+            if(!map.value) {
+              const pointer = row[relationKey] || null;
+              if(pointer) {
+                if(!_.isArray(value)) {
+                  if(!value.objectId || !value) {
+                    map[relationKey].value = null;
+                  }else {
+                    map[relationKey].value = Object.assign({}, pointer, value);
+                  }
+                }else {
+                  const list = [];
+                  value.forEach((item, index) => {
+                    if(pointer[index] && item.objectId) {
+                      list.push(Object.assign({}, pointer[index], item));
+                    }
+                  });
+                  map[relationKey].value = list;
+                }
+              }
             }
             //***处理其它层
-            const pointer = map.value && map.value[relationKey] || null;
-            if(pointer) {
-              if(!_.isArray(pointer)) {
-                if(!value.objectId || !value) {
-                  map.value[relationKey] = null;
+            else {
+              const pointer = map.value[relationKey] || null;
+              if(pointer) {
+                if(!_.isArray(pointer)) {
+                  if(!value.objectId || !value) {
+                    map.value[relationKey] = null;
+                  }else {
+                    Object.assign(pointer, value);
+                  }
                 }else {
-                  Object.assign(pointer, value);
-                }
-              }else {
-                const list = [];
-                if(pointer) {
+                  const list = [];
                   value.forEach((item, index) => {
                     if(pointer[index] && item.objectId) {
                       list.push(Object.assign(pointer[index], item));
@@ -62,7 +73,7 @@ module.exports = function (CB) {
     //***将关系对象的数据并合并到row中
     for(let key in relationMap) {
       if(row[key]) {
-        Object.assign(row[key], relationMap[key].value);
+        row[key] = relationMap[key].value;
       }
     }
   };
