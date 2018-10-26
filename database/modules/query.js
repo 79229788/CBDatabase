@@ -162,25 +162,19 @@ module.exports = function (CB) {
       if(!objectClass) throw new Error('调用CB.Query的include方法，必须设置第二个参数(objectClass)');
       let className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
       if(relationId) className += '@_@' + relationId;
-      let exist = false, _key = `^${key}`;
-      for(let item of this._queryOptions.includeCollection) {
-        exist = item.key === _key;
-        if(exist) {
-          _.extend(item, {
-            key: _key,
-            type: 'single',
-            className: className,
-            selectCollection: option.selects || []
-          });
-          break;
-        }
-      }
-      if(!exist) this._queryOptions.includeCollection.push({
+      const _key = `^${key}`;
+      const includeData = {
         key: _key,
         type: 'single',
         className: className,
         selectCollection: option.selects || []
-      });
+      };
+      const existInclude = _.find(this._queryOptions.includeCollection, item => item.key === _key);
+      if(existInclude) {
+        _.extend(existInclude, includeData);
+      }else {
+        this._queryOptions.includeCollection.push(includeData);
+      }
     },
     /**
      * 内嵌查询[内嵌的是数组对象][简易版：会完整返回嵌套的子类数据]
@@ -194,25 +188,19 @@ module.exports = function (CB) {
       if(!objectClass) throw new Error('[CB.Query] include方法，必须设置第二个参数(objectClass)');
       let className = _.isString(objectClass) ? objectClass : objectClass.prototype.className;
       if(relationId) className += '@_@' + relationId;
-      let exist = false, _key = `^${key}`;
-      for(let item of this._queryOptions.includeCollection) {
-        exist = item.key === _key;
-        if(exist) {
-          Object.assign(item, {
-            key: _key,
-            type: 'array',
-            className: className,
-            selectCollection: option.selects || []
-          });
-          break;
-        }
-      }
-      if(!exist) this._queryOptions.includeCollection.push({
+      const _key = `^${key}`;
+      const includeData = {
         key: _key,
         type: 'array',
         className: className,
         selectCollection: option.selects || []
-      });
+      };
+      const existInclude = _.find(this._queryOptions.includeCollection, item => item.key === _key);
+      if(existInclude) {
+        Object.assign(existInclude, includeData);
+      }else {
+        this._queryOptions.includeCollection.push(includeData);
+      }
     },
     /**
      * 内嵌查询文件
@@ -239,23 +227,8 @@ module.exports = function (CB) {
     includeQuery: function (key, object) {
       _.remove(this._queryOptions.includeCollection, item => item.key === key);
       if(!(object instanceof CB.InnerQuery)) throw new Error('[CB.Query] includeQuery方法，查询对象必须使用CB.InnerQuery构建');
-      let exist = false, _key = `^${key}`;
-      for(let item of this._queryOptions.includeCollection) {
-        if(item.key === _key) {
-          exist = true;
-          Object.assign(item, {
-            key: _key,
-            type: 'single',
-            className: object.className,
-            conditionJoins: object._queryOptions.conditionJoins,
-            conditionCollection: object._queryOptions.conditionCollection,
-            orderCollection: object._queryOptions.orderCollection,
-            selectCollection: object._queryOptions.selectCollection
-          });
-          break;
-        }
-      }
-      if(!exist) this._queryOptions.includeCollection.push({
+      const _key = `^${key}`;
+      const includeData = {
         key: _key,
         type: 'single',
         className: object.className,
@@ -263,26 +236,32 @@ module.exports = function (CB) {
         conditionCollection: object._queryOptions.conditionCollection,
         orderCollection: object._queryOptions.orderCollection,
         selectCollection: object._queryOptions.selectCollection
-      });
+      };
+      const existInclude = _.find(this._queryOptions.includeCollection, item => item.key === _key);
+      if(existInclude) {
+        Object.assign(existInclude, includeData);
+      }else {
+        this._queryOptions.includeCollection.push(includeData);
+      }
       object._queryOptions.includeCollection.forEach(innerItem => {
-        let exist = false, _key = `^${key}.${innerItem.key.replace(/^\^/, '')}`;
-        for(let outerItem of this._queryOptions.includeCollection) {
-          if(outerItem.key === _key) {
-            exist = true;
-            Object.assign(outerItem, {
-              key: _key,
-              type: innerItem.type,
-              className: innerItem.className,
-            });
-            break;
-          }
-        }
-        if(!exist) this._queryOptions.includeCollection.push({
+        const _key = `^${key}.${innerItem.key.replace(/^\^/, '')}`;
+        const existInclude = _.find(this._queryOptions.includeCollection, item => item.key === _key);
+        const includeData = {
           key: _key,
           type: innerItem.type,
           className: innerItem.className,
-        });
+          conditionJoins: innerItem.conditionJoins || '',
+          conditionCollection: innerItem.conditionCollection || [],
+          orderCollection: innerItem.orderCollection || [],
+          selectCollection: innerItem.selectCollection || []
+        };
+        if(existInclude) {
+          Object.assign(existInclude, includeData);
+        }else {
+          this._queryOptions.includeCollection.push(includeData);
+        }
       });
+
     },
 
     //*****************条件判断集合 start
