@@ -34,17 +34,7 @@ const Table1 = CB.Object.extend('Table1');
 const Table2 = CB.Object.extend('Table2');
 const Table3 = CB.Object.extend('Table3');
 
-const query = new CB.Query(Table1);
-query.select('name', 'table', 'tables');
-query.include('table', Table2, null, {selects: ['name', 'table']});
-query.include('table.table', Table3, null, {selects: ['name']});
-query.includeArray('tables', Table2, null, {selects: ['name']});
-query.first().then(data => {
-  console.log('@@@@@@@@@@@end');
-  console.log(data);
-}).catch(error => {
-  console.log(error);
-});
+
 
 
 //******************** 测试数据创建
@@ -97,17 +87,14 @@ query.first().then(data => {
 
 //********内嵌查询
 // //内嵌查询
-// const innerQuery = new CB.InnerQuery(Table2);
-// innerQuery.equalTo('name', '表格二2');
-// innerQuery.equalTo('boolean', false);
-// //主查询
 // const query = new CB.Query(Table1);
-// query.equalTo('name', '表格一');
-// query.equalTo('boolean', true);
-// query.includeQuery('table', innerQuery);
+// query.select('name', 'table', 'tables');
+// query.include('table', Table2, null, {selects: ['name', 'table']});
+// query.include('table.table', Table3, null, {selects: ['name']});
+// query.includeArray('tables', Table2, null, {selects: ['name']});
 // query.first().then(data => {
-//   if(!data) return console.log('未查询到数据');
-//   console.log(data.toOrigin());
+//   console.log('@@@@@@@@@@@end');
+//   console.log(data);
 // }).catch(error => {
 //   console.log(error);
 // });

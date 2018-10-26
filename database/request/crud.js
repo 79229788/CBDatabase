@@ -263,7 +263,7 @@ module.exports = function (CB) {
         const joinClassAlias = object.className = `${joinClassOrigin}_${_tailKey}_alias`; //连接表设置别名(防止不重复)
         //***获取连接表中的select数据
         const selectKeyValueList = [];
-        if(object.selectCollection.length > 0) {
+        if((object.selectCollection || []).length > 0) {
           const selects = _.flatten(object.selectCollection);
           if(selects.indexOf('objectId') < 0) selects.unshift('objectId');
           if(selects.indexOf('createdAt') < 0) selects.push('createdAt');
