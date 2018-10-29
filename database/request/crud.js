@@ -149,12 +149,12 @@ module.exports = function (CB) {
     //处理日期数据
     dateColumns.forEach((column) => {
       const origin = row[column.name];
-      row[column.name] = origin ? moment(origin).format('YYYY-MM-DD') : '';
+      row[column.name] = origin ? moment(origin).format('YYYY-MM-DD') : null;
     });
     //处理日期时间数据
     datetimeColumns.forEach((column) => {
       const origin = row[column.name];
-      row[column.name] = origin ? moment(origin).format('YYYY-MM-DD HH:mm:ss') : '';
+      row[column.name] = origin ? moment(origin).format('YYYY-MM-DD HH:mm:ss') : null;
     });
   };
   /**
