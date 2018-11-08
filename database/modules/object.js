@@ -1,13 +1,13 @@
 const _ = require('lodash');
 const utils = require('../utils');
-const RESERVED_KEYS = ['className', '__type', 'objectId', 'createdAt', 'updatedAt'];
-const checkReservedKey = function checkReservedKey(key) {
-  if(key.indexOf('^') > -1 || key.indexOf('.') > -1) {
-    throw new Error(`[CBOBJECT ERROR] 字段命名(${key})中不允许使用.和^，请修改后重试！`);
-  }
-};
 
 module.exports = function (CB) {
+  CB.reservedKeys = ['className', '__type', 'objectId', 'createdAt', 'updatedAt'];
+  CB.checkReservedKey = function (key) {
+    if(key.indexOf('^') > -1 || key.indexOf('.') > -1) {
+      throw new Error(`[CBOBJECT ERROR] 字段命名(${key})中不允许使用.和^，请修改后重试！`);
+    }
+  };
   CB.Object = function (attributes, options) {
     attributes = attributes || {};
     options = options || {};
@@ -71,12 +71,12 @@ module.exports = function (CB) {
       if(_.isObject(key)) {
         const object = {};
         _.each(key, (v, k) => {
-          checkReservedKey(k);
+          CB.checkReservedKey(k);
           object[k] = CB._encode(v);
         });
         attrs = Object.assign({}, this.attributes, object);
       }else {
-        checkReservedKey(key);
+        CB.checkReservedKey(key);
         attrs[key] = CB._encode(value);
       }
       if(attrs.objectId) this.id = attrs.objectId;
@@ -85,7 +85,7 @@ module.exports = function (CB) {
       if(attrs.createdAt) this.createdAt = CB._parseDate(attrs.createdAt);
       if(attrs.updatedAt) this.updatedAt = CB._parseDate(attrs.updatedAt);
       this.attributes = attrs;
-      RESERVED_KEYS.forEach(key => {
+      CB.reservedKeys.forEach(key => {
         delete this.attributes[key];
       });
       return this;
