@@ -90,7 +90,6 @@ module.exports = function (CB) {
     const objectColumns = [];
     const dateColumns = [];
     const datetimeColumns = [];
-    const stringColumns = [];
     (function findColumns(table, isParent) {
       if(!table) return;
       if(table.parent) {
@@ -108,10 +107,6 @@ module.exports = function (CB) {
           if(column.type === 'date') dateColumns.push(column);
           if(column.type === 'timestamp') datetimeColumns.push(column);
           if(column.type === 'object') objectColumns.push(column);
-          if(column.type === 'text'
-            || column.type.indexOf('char') === 0
-            || column.type.indexOf('character') === 0
-          ) stringColumns.push(column);
         }
       }
     })(_.find(CB.pgConfig.tableList, table => table.name === className.split('@_@')[0]), false);
@@ -140,11 +135,6 @@ module.exports = function (CB) {
       if(_.isString(origin) && origin !== '') {
         row[column.name] = JSON.parse(origin);
       }
-    });
-    //处理字符串数据
-    stringColumns.forEach((column) => {
-      const origin = row[column.name];
-      if(!origin) row[column.name] = '';
     });
     //处理日期数据
     dateColumns.forEach((column) => {
