@@ -104,12 +104,13 @@ module.exports = function (CB) {
      * 增量操作数值
      * @param key
      * @param value
+     * @param forceReturn //当增量为0时。也会进行返回
      * @return {CB}
      */
-    increment: function (key, value) {
+    increment: function (key, value, forceReturn) {
       if(!key) return this;
       if(!_.isNumber(value)) throw new Error('increment value must be number!');
-      if(value === 0) return this;
+      if(!forceReturn && value === 0) return this;
       delete this.attributes[key];
       this.set(key + ':[action]increment', value);
       return this;
