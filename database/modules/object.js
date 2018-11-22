@@ -568,8 +568,8 @@ module.exports = function (CB) {
     if(_.size(savedData) > 0) {
       savedData = CB._encode(savedData);
       model.id = savedData.objectId;
-      model.attributes.createdAt = savedData.createdAt;
-      model.attributes.updatedAt = savedData.updatedAt;
+      model.createdAt = savedData.createdAt;
+      model.updatedAt = savedData.updatedAt;
     }
     _.each(model.attributes, (value, key) => {
       if(key.indexOf(':[action]') > 0) {
@@ -579,7 +579,9 @@ module.exports = function (CB) {
       }
     });
     (model._returnKeys || []).forEach((key) => {
-      model.attributes[key] = savedData[key];
+      if(CB.reservedKeys.indexOf(key) < 0) {
+        model.attributes[key] = savedData[key];
+      }
     });
     model._previousAttributes = _.cloneDeep(model.attributes);
   };
