@@ -1,31 +1,28 @@
-const co = require('co');
 const _ = require('lodash');
 
 module.exports = {
   /**
-   * 请求操作
-   * @param client
+   * 请求方法
    * @param method
+   * @param client
    * @param args
-   * @return {Promise<>}
    */
-  request: function(client, method, ...args) {
+  request: function (client, method, ...args) {
     return new Promise((ok, no) => {
       let retry = 0;
       (function handle() {
-        co(function* () {
-          ok(yield client[method].apply(_.flatten(args)));
-        }).catch(error => {
+        client.send_command(method, _.flatten(args), (err, data) => {
+          if(!err) return ok(data);
           if(retry < 10) {
             setTimeout(() => {
               handle();
             }, _.random(100, 2000));
           }else {
-            no(error);
+            no(err);
           }
           retry ++;
         });
       })();
     });
-  },
+  }
 };

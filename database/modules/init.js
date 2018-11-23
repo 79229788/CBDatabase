@@ -3,7 +3,8 @@ const _ = require('lodash');
 const PG = require('pg');
 const OSS = require('ali-oss');
 const Redis = require('redis');
-const ossUtils = require('../utils/oss');
+const utilOss = require('../utils/oss');
+const utilRedis = require('../utils/redis');
 const checkTable = require('../hooks/checkTable');
 /**
  * 初始化默认数据库
@@ -45,11 +46,17 @@ CB.initOSS = function (config) {
   }, config || {});
   if(CB.ossConfig.disabled) return;
   CB.oss = new OSS(CB.ossConfig);
-  CB.oss.uploadBuffer = async function (key, value) {
-    return await ossUtils.uploadBuffer(CB.oss, key, value);
+  //*****通用请求
+  CB.oss.request = async function (method, ...args) {
+    return await utilOss.request(CB.oss, method, args);
   };
+  //*****上传数据
+  CB.oss.uploadBuffer = async function (key, value) {
+    return await CB.oss.request('put', key, value);
+  };
+  //*****删除数据
   CB.oss.deleteFile = async function (key) {
-    return await ossUtils.deleteFile(CB.oss, key);
+    return await CB.oss.request('delete', key);
   };
 };
 
@@ -71,24 +78,19 @@ CB.initSessionRedis = function (config) {
   CB.sessionRedis.on('error', (error) => {
     console.error('[Session Redis]', error.message);
   });
-  //*****设置临时数据（有过期时间的数据）
-  CB.sessionRedis.setTemporary = async function (key, value, expires) {
-    if(!expires) throw new Error('sessionRedis中setTemporary方法的expires参数不能为空');
-    return new Promise((ok, no) => {
-      CB.sessionRedis.psetex(key, expires, value, function (error, data) {
-        if(error) no(error);
-        ok(data);
-      });
-    });
+  //*****通用请求
+  CB.sessionRedis.request = async function (method, ...args) {
+    return await utilRedis.request(CB.sessionRedis, method, args);
+  };
+  //*****设置临时数据（有过期时间的数据，若缺省则沿用之前剩余时间）
+  CB.sessionRedis.setTemporary = async function handle (key, value, expires) {
+    if(expires) return await CB.sessionRedis.request('psetex', key, expires, value);
+    const pttl = await CB.sessionRedis.request('pttl', key);
+    return await handle(key, value, pttl);
   };
   //*****获取临时数据
   CB.sessionRedis.getTemporary = async function (key) {
-    return new Promise((ok, no) => {
-      CB.sessionRedis.get(key, function (error, data) {
-        if(error) no(error);
-        ok(data);
-      });
-    });
+    return await CB.sessionRedis.request('get', key);
   };
 };
 

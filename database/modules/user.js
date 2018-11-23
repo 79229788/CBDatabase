@@ -135,7 +135,7 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     saveCurrentUserInCache: async function (maxAge) {
-      await CB.sessionRedis.setTemporary(this.id + '@info', this.toJSON(), _.isUndefined(maxAge) ? CB.session.options.maxAge : maxAge);
+      await CB.sessionRedis.setTemporary(this.id + '@info', this.toJSON(), maxAge);
       return this;
     },
     /**
@@ -145,6 +145,7 @@ module.exports = function (CB) {
      */
     getCurrentUserFromCache: async function (childClass) {
       const data = JSON.parse(await CB.sessionRedis.getTemporary(this.id + '@info'));
+      if(!data) return null;
       const user = new CB.User(data);
       user.setChildClass(childClass || data.className || this._className);
       return user;
@@ -153,8 +154,8 @@ module.exports = function (CB) {
      * 从缓存服务器移除当前用户
      * @return
      */
-    removeCurrentUserFromCache: function () {
-      CB.sessionRedis.del(this.id + '@info');
+    removeCurrentUserFromCache: async function () {
+      await CB.sessionRedis.del(this.id + '@info');
       return this;
     },
     /**
@@ -311,10 +312,10 @@ module.exports = function (CB) {
     /**
      * 退出登陆
      */
-    logOut: function () {
+    logOut: async function () {
       if(!this.id) throw new Error('Cannot logOut with an empty id.');
-      CB.sessionRedis.del(this.id);
-      this.removeCurrentUserFromCache();
+      await CB.sessionRedis.del(this.id);
+      await this.removeCurrentUserFromCache();
       return this;
     },
 
