@@ -409,7 +409,7 @@ module.exports = function (CB) {
   CB.User.logOut = async function (userId) {
     const user = new CB.User();
     user.id = userId;
-    return user.logOut();
+    return await user.logOut();
   };
 
 };
