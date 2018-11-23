@@ -104,7 +104,7 @@ module.exports = function(CB) {
         return user;
       };
       //清理当前用户状态
-      res.clearCurrentUser = async function() {
+      res.clearCurrentUser = function() {
         responseUser = null;
         cookies.set(opts.name, '', opts);
         delete req.currentUser;
