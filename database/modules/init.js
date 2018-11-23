@@ -24,6 +24,7 @@ CB.initPG = function (config) {
     checkTable      : false,
     disabled        : false,
     debug           : false,
+    env             : 'dev',
   }, config || {});
   if(CB.pg.config.disabled) return;
   CB.pg = new PG.Pool(CB.pg.config);
@@ -47,6 +48,7 @@ CB.initOSS = function (config) {
     url             : '',
     disabled        : false,
     debug           : false,
+    env             : 'dev',
   }, config || {});
   if(CB.oss.config.disabled) return;
   CB.oss = new OSS(CB.oss.config);
@@ -76,6 +78,7 @@ CB.initSessionRedis = function (config) {
     password        : '',
     disabled        : false,
     debug           : false,
+    env             : 'dev',
   }, config || {});
   if(CB.sessionRedis.config.disabled) return;
   const _config = _.clone(CB.sessionRedis.config);
