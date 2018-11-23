@@ -93,7 +93,7 @@ module.exports = function (CB) {
     (function findColumns(table, isParent) {
       if(!table) return;
       if(table.parent) {
-        findColumns(_.find(CB.pgConfig.tableList, {name: table.parent}), true);
+        findColumns(_.find(CB.pg.config.tableList, {name: table.parent}), true);
       }
       if(table.name === className.split('@_@')[0] || isParent) {
         for(let column of table.columns) {
@@ -109,7 +109,7 @@ module.exports = function (CB) {
           if(column.type === 'object') objectColumns.push(column);
         }
       }
-    })(_.find(CB.pgConfig.tableList, table => table.name === className.split('@_@')[0]), false);
+    })(_.find(CB.pg.config.tableList, table => table.name === className.split('@_@')[0]), false);
     //处理浮点数数据
     floatColumns.forEach((column) => {
       const origin = row[column.name];
@@ -927,7 +927,7 @@ module.exports = function (CB) {
    * @param type
    */
   function printSql(sql, className, type) {
-    if(CB.pgConfig.printSql) {
+    if(CB.pg.config.printSql) {
       sql = `↓[Database ${type} class ${className}: ${moment().format('YYYY-MM-DD HH:mm:ss')}]\n` + sql;
       sql = sql.replace(/\n+/g, '\n');
       sql = sql.replace(/\s*,/g, ',\n ');
@@ -942,7 +942,7 @@ module.exports = function (CB) {
    * @param type
    */
   function printSqlParams(params, className, type) {
-    if(CB.pgConfig.printSqlParams) {
+    if(CB.pg.config.printSqlParams) {
       console.log(`↓[Database ${type} class ${className}: ${moment().format('YYYY-MM-DD HH:mm:ss')}]\n`, params);
     }
   }

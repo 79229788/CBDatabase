@@ -256,7 +256,7 @@ module.exports = function (CB) {
         fileId = this.id || shortId.generate();
         const ossCloud = await CB.oss.uploadBuffer(`${this.rootName}/${fileId}${this._extName ? `.${this._extName}` : ''}`, data);
         if(!ossCloud.url) throw new Error('Upload successful, but unknown reason can not get url');
-        const url = CB.ossConfig.url ? `${CB.ossConfig.url}/${ossCloud.name}` : ossCloud.url;
+        const url = CB.oss.config.url ? `${CB.oss.config.url}/${ossCloud.name}` : ossCloud.url;
         this.set('url', url);
         this.set('provider', 'oss');
       }

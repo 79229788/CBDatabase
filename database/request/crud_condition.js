@@ -249,6 +249,10 @@ module.exports = function (className, object, index) {
       res.isVariable = true;
       res.value = value.replace(/\$\{([\s\S][^\}]*)\}/g, `"${className}"."$1"`);
     }
+    if(typeof value === 'string' && value.indexOf('$') >= 0 && value.indexOf('{') < 0 && value.indexOf('}') < 0) {
+      res.isVariable = true;
+      res.value = `"${className}"."${value.substr(1)}"`
+    }
     return res;
   }
   /**
@@ -259,6 +263,9 @@ module.exports = function (className, object, index) {
   function getVariableKey(key) {
     if(key.indexOf('${') >= 0 && key.indexOf('}') > 0 ) {
       return key.replace(/\$\{([\s\S][^\}]*)\}/g, `"${className}"."$1"`);
+    }
+    if(key.indexOf('$') >= 0 && key.indexOf('{') < 0 && key.indexOf('}') < 0) {
+      return `"${className}"."${key.substr(1)}"`
     }
     return `"${className}"."${key}"`;
   }

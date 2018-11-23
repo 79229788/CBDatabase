@@ -11,24 +11,26 @@ const checkTable = require('../hooks/checkTable');
  * @param config
  */
 CB.initPG = function (config) {
-  CB.pgConfig = _.extend({
-    host     : '',
-    port     : 8888,
-    user     : '',
-    password : '',
-    database : 'web',
-    printSql : false,
-    printSqlParams : false,
-    tableList: [],
-    checkTable: false,
-    disabled: false,
+  CB.pg = {};
+  CB.pg.config = _.extend({
+    host            : '',
+    port            : 8888,
+    user            : '',
+    password        : '',
+    database        : 'web',
+    printSql        : false,
+    printSqlParams  : false,
+    tableList       : [],
+    checkTable      : false,
+    disabled        : false,
+    debug           : false,
   }, config || {});
-  if(CB.pgConfig.disabled) return;
-  CB.pg = new PG.Pool(CB.pgConfig);
+  if(CB.pg.config.disabled) return;
+  CB.pg = new PG.Pool(CB.pg.config);
   CB.pg.on('error', (error) => {
     console.error('[PG]', error.message);
   });
-  if(CB.pgConfig.checkTable) checkTable(CB.pgConfig.tableList || []);
+  if(CB.pg.config.checkTable) checkTable(CB.pg.config.tableList || []);
 };
 
 /**
@@ -36,16 +38,18 @@ CB.initPG = function (config) {
  * @param config
  */
 CB.initOSS = function (config) {
-  CB.ossConfig = _.extend({
+  CB.oss = {};
+  CB.oss.config = _.extend({
     endpoint        : '',
     accessKeyId     : '',
     accessKeySecret : '',
     bucket          : '',
     url             : '',
-    disabled: false,
+    disabled        : false,
+    debug           : false,
   }, config || {});
-  if(CB.ossConfig.disabled) return;
-  CB.oss = new OSS(CB.ossConfig);
+  if(CB.oss.config.disabled) return;
+  CB.oss = new OSS(CB.oss.config);
   //*****通用请求
   CB.oss.request = async function (method, ...args) {
     return await utilOss.request(CB.oss, method, args);
@@ -65,14 +69,16 @@ CB.initOSS = function (config) {
  * @param config
  */
 CB.initSessionRedis = function (config) {
-  CB.sessionRedisConfig = _.extend({
-    host: '',
-    port: 6379,
-    password : '',
-    disabled: false,
+  CB.sessionRedis = {};
+  CB.sessionRedis.config = _.extend({
+    host            : '',
+    port            : 6379,
+    password        : '',
+    disabled        : false,
+    debug           : false,
   }, config || {});
-  if(CB.sessionRedisConfig.disabled) return;
-  const _config = _.clone(CB.sessionRedisConfig);
+  if(CB.sessionRedis.config.disabled) return;
+  const _config = _.clone(CB.sessionRedis.config);
   if(!_config.password) delete _config.password;
   CB.sessionRedis = Redis.createClient(_config);
   CB.sessionRedis.on('error', (error) => {
