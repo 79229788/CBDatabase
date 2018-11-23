@@ -16,18 +16,25 @@ CB.initPG({
   tableList       : config_tables.tables,
   checkTable      : true,
   printSql        : false,
-  printSqlParams  : false
+  printSqlParams  : false,
+  env             : 'dev',
+  debug           : false,
 });
-CB.initOSS({
+CB.initStaticOSS({
   endpoint        : config_oss.oss.endpoint,
+  endpointInternal: config_oss.oss.endpointInternal,
   accessKeyId     : config_oss.oss.accessKeyId,
   accessKeySecret : config_oss.oss.accessKeySecret,
   bucket          : config_oss.oss.bucket,
+  env             : 'dev',
+  debug           : false,
 });
 CB.initSessionRedis({
   host          : config_redis.redis.sessionRedis.host,
   port          : config_redis.redis.sessionRedis.port,
   password      : config_redis.redis.sessionRedis.password,
+  env             : 'dev',
+  debug           : false,
 });
 
 const Table1 = CB.Object.extend('Table1');
