@@ -1,4 +1,3 @@
-const co = require('co');
 const _ = require('lodash');
 
 module.exports = {
@@ -13,9 +12,10 @@ module.exports = {
     return new Promise((ok, no) => {
       let retry = 0;
       (function handle() {
-        co(function* () {
-          ok(yield client[method].apply(_.flatten(args)));
+        client[method].apply(client, _.flatten(args)).then(data => {
+          ok(data);
         }).catch(error => {
+          if(error.code === 'NoSuchKey') return ok(null);
           if(retry < 10) {
             setTimeout(() => {
               handle();

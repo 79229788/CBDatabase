@@ -9,7 +9,7 @@ module.exports = function(CB) {
      * @param {String} string
      */
     decode: function (string) {
-      const body = new Buffer(string, 'base64').toString('utf8');
+      const body = Buffer.from(string, 'base64').toString('utf8');
       return JSON.parse(body);
     },
     /**
@@ -18,7 +18,7 @@ module.exports = function(CB) {
      */
     encode: function (body) {
       body = JSON.stringify(body);
-      return new Buffer(body).toString('base64');
+      return Buffer.from(body).toString('base64');
     },
     /**
      * 获取随机字符串

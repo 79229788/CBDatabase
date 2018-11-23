@@ -11,6 +11,7 @@ const checkTable = require('../hooks/checkTable');
  * @param config
  */
 CB.initPG = function (config) {
+  CB.PG = PG;
   const _config = Object.assign({
     host            : '',
     port            : 8888,
@@ -35,10 +36,12 @@ CB.initPG = function (config) {
 };
 
 /**
- * 初始化默认OSS
+ * 初始化静态OSS
  * @param config
  */
-CB.initOSS = function (config) {
+CB.initStaticOSS = function (config) {
+  CB.OSS = OSS;
+  CB.ossUtils = utilOss;
   const _config = Object.assign({
     endpoint        : '',
     endpointInternal: '',
@@ -53,19 +56,15 @@ CB.initOSS = function (config) {
   if(config.disabled) return;
   delete _config.endpointInternal;
   _config.endpoint = config.env === 'dev' ? config.endpoint : config.endpointInternal;
-  CB.oss = new OSS(_config);
-  CB.oss.config = _config;
-  //*****通用请求
-  CB.oss.request = async function (method, ...args) {
-    return await utilOss.request(CB.oss, method, args);
-  };
+  CB.staticOss = new OSS(_config);
+  CB.staticOss.config = _config;
   //*****上传数据
-  CB.oss.uploadBuffer = async function (key, value) {
-    return await CB.oss.request('put', key, value);
+  CB.staticOss.uploadBuffer = async function (key, value) {
+    return await utilOss.request(CB.oss, 'put', key, value);
   };
   //*****删除数据
-  CB.oss.deleteFile = async function (key) {
-    return await CB.oss.request('delete', key);
+  CB.staticOss.deleteFile = async function (key) {
+    return await utilOss.request(CB.oss, 'delete', key);
   };
 };
 
@@ -74,6 +73,7 @@ CB.initOSS = function (config) {
  * @param config
  */
 CB.initSessionRedis = function (config) {
+  CB.Redis = Redis;
   const _config = Object.assign({
     host            : '',
     port            : 6379,
@@ -86,22 +86,19 @@ CB.initSessionRedis = function (config) {
   if(!_config.password) delete _config.password;
   CB.sessionRedis = Redis.createClient(_config);
   CB.sessionRedis.config = _config;
+  CB.sessionRedis.utils = utilRedis;
   CB.sessionRedis.on('error', (error) => {
     console.error('[Session Redis]', error.message);
   });
-  //*****通用请求
-  CB.sessionRedis.request = async function (method, ...args) {
-    return await utilRedis.request(CB.sessionRedis, method, args);
-  };
   //*****设置临时数据（有过期时间的数据，若缺省则沿用之前剩余时间）
   CB.sessionRedis.setTemporary = async function handle (key, value, expires) {
-    if(expires) return await CB.sessionRedis.request('psetex', key, expires, value);
-    const pttl = await CB.sessionRedis.request('pttl', key);
+    if(expires) return await utilRedis.request(CB.sessionRedis, 'psetex', key, expires, value);
+    const pttl = await utilRedis.request(CB.sessionRedis, 'pttl', key);
     return await handle(key, value, pttl);
   };
   //*****获取临时数据
   CB.sessionRedis.getTemporary = async function (key) {
-    return await CB.sessionRedis.request('get', key);
+    return await utilRedis.request(CB.sessionRedis, 'get', key);
   };
 };
 
