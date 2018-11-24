@@ -36,7 +36,7 @@ CB.initPG = function (config) {
 };
 
 /**
- * 初始化静态OSS
+ * 初始化静态仓库
  * @param config
  */
 CB.initStaticOSS = function (config) {
@@ -60,16 +60,16 @@ CB.initStaticOSS = function (config) {
   CB.staticOss.config = _config;
   //*****上传数据
   CB.staticOss.uploadBuffer = async function (key, value) {
-    return await utilOss.request(CB.oss, 'put', key, value);
+    return await utilOss.request(CB.staticOss, 'put', key, value);
   };
   //*****删除数据
   CB.staticOss.deleteFile = async function (key) {
-    return await utilOss.request(CB.oss, 'delete', key);
+    return await utilOss.request(CB.staticOss, 'delete', key);
   };
 };
 
 /**
- * 初始化Session Redis
+ * 初始化Session仓库
  * @param config
  */
 CB.initSessionRedis = function (config) {
