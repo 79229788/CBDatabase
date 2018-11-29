@@ -36,10 +36,10 @@ CB.initPG = function (config) {
 };
 
 /**
- * 初始化静态仓库
+ * 初始化CDN仓库
  * @param config
  */
-CB.initStaticOSS = function (config) {
+CB.initCdnOSS = function (config) {
   CB.OSS = OSS;
   CB.ossUtils = utilOss;
   const _config = Object.assign({
@@ -48,7 +48,7 @@ CB.initStaticOSS = function (config) {
     accessKeyId     : '',
     accessKeySecret : '',
     bucket          : '',
-    url             : '',
+    domain          : '',
     disabled        : false,
     debug           : false,
     env             : 'dev',
@@ -56,15 +56,15 @@ CB.initStaticOSS = function (config) {
   if(config.disabled) return;
   delete _config.endpointInternal;
   _config.endpoint = config.env === 'dev' ? config.endpoint : config.endpointInternal;
-  CB.staticOss = new OSS(_config);
-  CB.staticOss.config = _config;
+  CB.cdnOss = new OSS(_config);
+  CB.cdnOss.config = _config;
   //*****上传数据
-  CB.staticOss.uploadBuffer = async function (key, value) {
-    return await utilOss.request(CB.staticOss, 'put', key, value);
+  CB.cdnOss.uploadBuffer = async function (key, value) {
+    return await utilOss.request(CB.cdnOss, 'put', key, value);
   };
   //*****删除数据
-  CB.staticOss.deleteFile = async function (key) {
-    return await utilOss.request(CB.staticOss, 'delete', key);
+  CB.cdnOss.deleteFile = async function (key) {
+    return await utilOss.request(CB.cdnOss, 'delete', key);
   };
 };
 

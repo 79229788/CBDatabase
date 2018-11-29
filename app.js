@@ -20,7 +20,7 @@ CB.initPG({
   env             : 'dev',
   debug           : false,
 });
-CB.initStaticOSS({
+CB.initCdnOSS({
   endpoint        : config_oss.oss.endpoint,
   endpointInternal: config_oss.oss.endpointInternal,
   accessKeyId     : config_oss.oss.accessKeyId,

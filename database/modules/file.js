@@ -254,9 +254,16 @@ module.exports = function (CB) {
           this.set('mimeType', typeInfo.mime);
         }
         fileId = this.id || shortId.generate();
-        const ossCloud = await CB.staticOss.uploadBuffer(`${this.rootName}/${fileId}${this._extName ? `.${this._extName}` : ''}`, data);
+        const ossCloud = await CB.cdnOss.uploadBuffer(`${this.rootName}/${fileId}${this._extName ? `.${this._extName}` : ''}`, data);
         if(!ossCloud.url) throw new Error('Upload successful, but unknown reason can not get url');
-        const url = CB.staticOss.config.url ? `${CB.staticOss.config.url}/${ossCloud.name}` : ossCloud.url;
+        let url = ossCloud.url;
+        if(CB.cdnOss.config.domain) {
+          if(ossCloud.name.indexOf('/') === 0) {
+            url = CB.cdnOss.config.domain + ossCloud.name;
+          }else {
+            url = CB.cdnOss.config.domain + '/' + ossCloud.name;
+          }
+        }
         this.set('url', url);
         this.set('provider', 'oss');
       }
@@ -288,7 +295,7 @@ module.exports = function (CB) {
         objectId: this.id
       }, null, client);
       //***从oss中删除
-      await CB.staticOss.deleteFile(`${this.rootName}/${this.id}.${suffix}`);
+      await CB.cdnOss.deleteFile(`${this.rootName}/${this.id}.${suffix}`);
       return 'ok';
     }
   };
