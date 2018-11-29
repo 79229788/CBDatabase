@@ -25,7 +25,7 @@ module.exports = function (CB) {
               const pointer = row[relationKey] || null;
               if(pointer) {
                 if(!_.isArray(value)) {
-                  if(!value.objectId || !value) {
+                  if(!value || !value.objectId) {
                     map[relationKey].value = null;
                   }else {
                     map[relationKey].value = Object.assign({}, pointer, value);
@@ -46,7 +46,7 @@ module.exports = function (CB) {
               const pointer = map.value[relationKey] || null;
               if(pointer) {
                 if(!_.isArray(pointer)) {
-                  if(!value.objectId || !value) {
+                  if(!value || !value.objectId) {
                     map.value[relationKey] = null;
                   }else {
                     Object.assign(pointer, value);
