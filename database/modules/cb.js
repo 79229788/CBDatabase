@@ -148,7 +148,7 @@ CB._decode = function (object, hiddenFields = []) {
     });
     return CB._decode(origin, hiddenFields);
   }
-  if(object instanceof CB.Relation) return object.toOrigin();
+  if(object instanceof CB.Relation) return object.getPointer();
   if(_.isObject(object)) return _.mapValues(object, value => CB._decode(value, hiddenFields));
   return object;
 };
