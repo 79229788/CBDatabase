@@ -1,5 +1,5 @@
 const _ = require('lodash');
-const shortId = require('shortid');
+const uniqid = require('uniqid');
 const fileType = require('file-type');
 const parseBase64 = require('../utils/parse-base64');
 
@@ -253,7 +253,7 @@ module.exports = function (CB) {
           this._extName = typeInfo.ext;
           this.set('mimeType', typeInfo.mime);
         }
-        fileId = this.id || shortId.generate();
+        fileId = this.id || uniqid();
         const ossCloud = await CB.cdnOss.uploadBuffer(`${this.rootName}/${fileId}${this._extName ? `.${this._extName}` : ''}`, data);
         if(!ossCloud.url) throw new Error('Upload successful, but unknown reason can not get url');
         let url = ossCloud.url;

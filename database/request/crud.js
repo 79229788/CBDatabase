@@ -1,6 +1,6 @@
 const _ = require('lodash');
 const moment = require('moment');
-const shortId = require('shortid');
+const uniqid = require('uniqid');
 const Condition = require('./crud_condition');
 
 module.exports = function (CB) {
@@ -637,7 +637,7 @@ module.exports = function (CB) {
     create: async function (className, object, returnKeys, client) {
       if(_.size(object) === 0) return;
       Object.assign(object, {
-        objectId: shortId.generate(),
+        objectId: uniqid(),
         createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
         updatedAt: moment().format('YYYY-MM-DD HH:mm:ss')
       });

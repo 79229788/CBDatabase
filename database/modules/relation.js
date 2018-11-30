@@ -1,5 +1,5 @@
 const _ = require('lodash');
-const shortId = require('shortid');
+const uniqid = require('uniqid');
 
 module.exports = function (CB) {
 
@@ -18,7 +18,7 @@ module.exports = function (CB) {
     }else {
       className = _.isString(className) ? className : className.prototype.className;
       this.className = className;
-      this.relationId = relationId || shortId.generate();
+      this.relationId = relationId || uniqid();
       this.key = key || '';
     }
   };
@@ -80,7 +80,7 @@ module.exports = function (CB) {
             {name: 'objectId', type: 'text', isPrimary: true},
             {name: '__key', type: 'text'},
           ], client);
-          this.key = shortId.generate();
+          this.key = uniqid();
         }else {
           relationClassName = this.className;
           this.key = this.relationId;

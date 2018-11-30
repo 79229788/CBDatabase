@@ -113,25 +113,25 @@ module.exports = function(CB) {
       if(responseUser) return next();
       //每次请求时验证session
       (async () => {
-        let sessionObject = {};
-        const cookieSession = cookies.get(opts.name);
-        const cookieSign = cookies.get(opts.name + '.sig');
-        if(cookieSession) sessionObject = CB.session.decode(cookieSession);
-        const uid = sessionObject._uid;
-        const sessionToken = sessionObject._sessionToken;
-        if(uid && sessionToken && keys.verify(`${opts.name}=${cookieSession}`, cookieSign)) {
-          const userPointer = new CB.User();
-          userPointer.id = uid;
-          userPointer._sessionToken = sessionToken;
-          if(await userPointer.isAuthenticated()) {
-            if(opts.fetchUser) {
-              const user = await userPointer.getCurrentUserFromCache();
-              user._sessionToken = sessionToken;
-              req.currentUser = user;
-              req.sessionToken = sessionToken;
-            }else {
-              req.currentUser = userPointer;
-              req.sessionToken = sessionToken;
+        const cookieSession = cookies.get(opts.name, { signed: true });
+        if(cookieSession) {
+          const sessionObject = CB.session.decode(cookieSession);
+          const uid = sessionObject._uid;
+          const sessionToken = sessionObject._sessionToken;
+          if(uid && sessionToken) {
+            const userPointer = new CB.User();
+            userPointer.id = uid;
+            userPointer._sessionToken = sessionToken;
+            if(await userPointer.isAuthenticated()) {
+              if(opts.fetchUser) {
+                const user = await userPointer.getCurrentUserFromCache();
+                user._sessionToken = sessionToken;
+                req.currentUser = user;
+                req.sessionToken = sessionToken;
+              }else {
+                req.currentUser = userPointer;
+                req.sessionToken = sessionToken;
+              }
             }
           }
         }
