@@ -91,9 +91,10 @@ CB.initSessionRedis = function (config) {
     console.error('[Session Redis]', error.message);
   });
   //*****设置临时数据（有过期时间的数据，若缺省则沿用之前剩余时间）
-  CB.sessionRedis.setTemporary = async function handle (key, value, expires) {
-    if(expires && expires >= 0) return await utilRedis.request(CB.sessionRedis, 'psetex', key, expires, value);
-    const pttl = await utilRedis.request(CB.sessionRedis, 'pttl', key);
+  CB.sessionRedis.setTemporary = async function handle (key, value, expires, maxExpires) {
+    if(expires) return await utilRedis.request(CB.sessionRedis, 'psetex', key, expires, value);
+    let pttl = await utilRedis.request(CB.sessionRedis, 'pttl', key);
+    if(!(pttl > 0)) pttl = maxExpires;
     return await handle(key, value, pttl);
   };
   //*****获取临时数据

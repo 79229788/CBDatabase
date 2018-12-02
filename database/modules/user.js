@@ -135,7 +135,7 @@ module.exports = function (CB) {
      * @return {Promise.<void>}
      */
     saveCurrentUserInCache: async function (maxAge) {
-      await CB.sessionRedis.setTemporary(this.id + '@info', this.toJSON(), maxAge);
+      await CB.sessionRedis.setTemporary(this.id + '@info', this.toJSON(), maxAge, CB.session.options.maxAge);
       return this;
     },
     /**
